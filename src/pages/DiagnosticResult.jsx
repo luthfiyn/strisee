@@ -1,16 +1,99 @@
-import React from 'react';
-import { ArrowLeft, AlertCircle, Droplet, Circle, Wind, Sprout, Save } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, AlertCircle, Droplet, Circle, Wind, Sprout, Save, Scan } from 'lucide-react';
+import * as tf from '@tensorflow/tfjs';
+import * as tflite from '@tensorflow/tfjs-tflite';
+import { supabase } from '../supabaseClient';
 
-export default function DiagnosticResult({ navigate }) {
+export default function DiagnosticResult() {
+  const navigate = useNavigate();
+  const videoRef = useRef(null);
+  const [model, setModel] = useState(null);
+  const [result, setResult] = useState(null);
+  const [isScanning, setIsScanning] = useState(false);
+
+  useEffect(() => {
+    // 1. Inisialisasi Kamera Belakang
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => { if (videoRef.current) videoRef.current.srcObject = stream; })
+      .catch(err => console.error("Akses kamera ditolak atau tidak ada koneksi HTTPS.", err));
+
+    // 2. Muat Model YOLOv12
+    tflite.loadTFLiteModel('/yolov12-strise.tflite').then(setModel);
+  }, []);
+
+  const handleScan = async () => {
+    if (!model || !videoRef.current) return;
+    setIsScanning(true);
+
+    try {
+      // Ambil frame dan normalisasi
+      const tensor = tf.browser.fromPixels(videoRef.current)
+        .resizeBilinear([640, 640])
+        .expandDims(0)
+        .div(255.0);
+      
+      await model.predict(tensor); 
+      // Simulasi Output (Karena post-processing YOLO butuh fungsi Non-Max Suppression)
+      const mockResult = { class: "Antraknosa", confidence: 0.94, catalogId: 1 };
+      
+      setResult(mockResult);
+
+      // Simpan riwayat ke Supabase
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('disease_histories').insert([{
+          user_id: user.id,
+          catalog_id: mockResult.catalogId,
+          confidence: mockResult.confidence
+        }]);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+    setIsScanning(false);
+  };
+
+  // --- TAMPILAN PEMINDAI (Saat belum ada hasil) ---
+  if (!result) {
+    return (
+      <div className="h-screen bg-black flex flex-col relative overflow-hidden">
+        <header className="absolute top-0 w-full z-20 flex justify-between items-center p-6">
+          <button onClick={() => navigate('/dashboard')} className="w-12 h-12 flex items-center justify-center bg-white/80 rounded-full shadow-md text-slate-900 transition-transform hover:scale-105">
+            <ArrowLeft size={24} />
+          </button>
+          <div className="px-4 py-2 bg-white/80 backdrop-blur-md rounded-full shadow-md flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+            <span className="text-xs font-bold tracking-widest uppercase text-slate-900">Live Kamera</span>
+          </div>
+        </header>
+        
+        <video ref={videoRef} autoPlay playsInline muted className="w-full h-[70vh] object-cover" />
+        <div className="absolute top-[20%] left-[10%] w-[80%] h-[40vh] border-2 border-red-500 rounded-lg pointer-events-none"></div>
+        
+        <div className="bg-white flex-1 -mt-6 rounded-t-3xl p-6 flex flex-col items-center justify-center z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+          <p className="text-gray-500 text-center mb-6 text-sm font-medium">Arahkan kamera ke bagian daun atau buah stroberi yang mencurigakan.</p>
+          <button 
+            onClick={handleScan} disabled={isScanning || !model}
+            className="bg-gradient-to-r from-red-700 to-red-600 text-white rounded-full p-6 shadow-xl shadow-red-200 hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+          >
+            <Scan size={36} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- TAMPILAN HASIL DIAGNOSIS (Sesuai UI aslimu) ---
   return (
     <div className="pb-32">
       <header className="absolute top-0 w-full z-20 flex justify-between items-center p-6">
-        <button onClick={() => navigate('dashboard')} className="w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full shadow-md text-slate-900 transition-transform hover:scale-105">
+        <button onClick={() => setResult(null)} className="w-12 h-12 flex items-center justify-center bg-white/80 backdrop-blur-md rounded-full shadow-md text-slate-900 transition-transform hover:scale-105">
           <ArrowLeft size={24} />
         </button>
         <div className="px-4 py-2 bg-white/80 backdrop-blur-md rounded-full shadow-md flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-          <span className="text-xs font-bold tracking-widest uppercase text-slate-900">Pemindaian Langsung</span>
+          <span className="w-2 h-2 rounded-full bg-red-600"></span>
+          <span className="text-xs font-bold tracking-widest uppercase text-slate-900">Selesai</span>
         </div>
       </header>
       
@@ -23,12 +106,12 @@ export default function DiagnosticResult({ navigate }) {
         <div className="bg-white rounded-3xl p-8 shadow-xl mb-12 border border-slate-100">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-none mb-2">Antraknosa</h1>
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 leading-none mb-2">{result.class}</h1>
               <p className="text-slate-500 font-medium text-lg italic">Colletotrichum acutatum</p>
             </div>
             <div className="flex flex-col items-end bg-red-50 text-red-800 px-4 py-3 rounded-2xl">
               <span className="text-[10px] uppercase tracking-widest font-bold mb-1 opacity-80">Tingkat Keyakinan</span>
-              <span className="text-2xl font-bold leading-none">94%</span>
+              <span className="text-2xl font-bold leading-none">{(result.confidence * 100).toFixed(0)}%</span>
             </div>
           </div>
           <div className="mt-6 flex flex-wrap gap-3">
@@ -98,7 +181,7 @@ export default function DiagnosticResult({ navigate }) {
 
       <div className="fixed bottom-0 left-0 w-full z-40 bg-white/80 backdrop-blur-2xl border-t border-slate-100 pt-4 pb-6 px-6 md:px-12 flex justify-center">
         <div className="w-full max-w-4xl">
-          <button onClick={() => navigate('history')} className="w-full relative group overflow-hidden rounded-2xl bg-gradient-to-r from-red-700 to-red-600 text-white py-5 px-8 shadow-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-3">
+          <button onClick={() => navigate('/history')} className="w-full relative group overflow-hidden rounded-2xl bg-gradient-to-r from-red-700 to-red-600 text-white py-5 px-8 shadow-lg transition-all hover:-translate-y-1 flex items-center justify-center gap-3">
             <Save size={24} />
             <span className="font-bold tracking-wide text-lg">Simpan ke Riwayat</span>
           </button>

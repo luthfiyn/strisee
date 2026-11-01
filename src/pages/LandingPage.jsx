@@ -1,7 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Droplet, Microscope, ShieldAlert, Radio, TrendingUp } from 'lucide-react';
 
-export default function LandingPage({ navigate }) {
+export default function LandingPage() {
+  const navigate = useNavigate();
   return (
     <div className="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full space-y-16">
       <section className="relative bg-slate-100 rounded-xl overflow-hidden flex flex-col md:flex-row items-center justify-between">
@@ -16,7 +18,7 @@ export default function LandingPage({ navigate }) {
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <button 
-              onClick={() => navigate('register')}
+              onClick={() => navigate('/register')}
               className="bg-gradient-to-r from-red-700 to-red-600 text-white font-bold text-lg px-8 py-4 rounded-xl shadow-lg hover:-translate-y-1 transition-all"
             >
               Mulai Sekarang
