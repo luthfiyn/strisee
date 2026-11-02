@@ -6,24 +6,58 @@ import { supabase } from '../supabaseClient';
 export default function Monitoring() {
   const navigate = useNavigate();
   const [sensor, setSensor] = useState({ ph_value: 6.5, moisture_value: 70 });
+  const [alerts, setAlerts] = useState([]); // State khusus untuk Notifikasi dari DB
 
   useEffect(() => {
+    // Tarik data metrik sensor
     const fetchLatest = async () => {
       const { data } = await supabase.from('sensor_logs').select('*').order('timestamp', { ascending: false }).limit(1);
       if (data?.length > 0) setSensor(data[0]);
     };
-    fetchLatest();
+    
+    // Tarik data notifikasi yang belum dibaca pekerja
+    const fetchAlerts = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('user_notifications')
+          .select(`id, is_read, notifications(type, message, created_at)`)
+          .eq('user_id', user.id)
+          .eq('is_read', false)
+          .order('id', { ascending: false });
+        if (data) setAlerts(data);
+      }
+    };
 
-    const channel = supabase.channel('monitoring_updates')
+    fetchLatest();
+    fetchAlerts();
+
+    // Subscribe realtime untuk sensor
+    const sensorChannel = supabase.channel('monitoring_updates')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_logs' }, (payload) => setSensor(payload.new))
       .subscribe();
+      
+    // Subscribe realtime untuk notifikasi baru masuk
+    const alertChannel = supabase.channel('alert_updates')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_notifications' }, () => fetchAlerts())
+      .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    return () => {
+      supabase.removeChannel(sensorChannel);
+      supabase.removeChannel(alertChannel);
+    };
   }, []);
+
+  const handleMarkAsRead = async (notificationId) => {
+    // Ubah status is_read di database
+    await supabase.from('user_notifications').update({ is_read: true, read_at: new Date() }).eq('id', notificationId);
+    // Hapus dari tampilan layar
+    setAlerts(alerts.filter(alert => alert.id !== notificationId));
+  };
 
   const isPhOptimal = sensor.ph_value >= 5.5 && sensor.ph_value <= 6.5;
   const isMoistureOptimal = sensor.moisture_value >= 60 && sensor.moisture_value <= 80;
-  const requireAttention = !isPhOptimal || !isMoistureOptimal;
+  const requireAttention = alerts.length > 0 || !isPhOptimal || !isMoistureOptimal;
 
   return (
     <main className="pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full pb-32">
@@ -52,9 +86,6 @@ export default function Monitoring() {
                 {isMoistureOptimal ? "Tingkat Optimal" : "Di Luar Target (60 - 80%)"}
               </p>
             </div>
-            <div className={`${isMoistureOptimal ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700"} px-3 py-1 rounded-full text-xs font-bold`}>
-              {isMoistureOptimal ? "Normal" : "Peringatan"}
-            </div>
           </div>
           <div className="relative z-10 flex items-end justify-between">
             <div className="flex items-baseline">
@@ -63,18 +94,10 @@ export default function Monitoring() {
               </span>
               <span className="text-2xl font-bold text-slate-400 ml-1">%</span>
             </div>
-            <div className="w-1/2 h-12 flex items-end gap-1 opacity-80">
-              <div className="w-full bg-slate-200 rounded-t-sm h-1/4"></div>
-              <div className="w-full bg-slate-200 rounded-t-sm h-2/4"></div>
-              <div className="w-full bg-slate-200 rounded-t-sm h-3/4"></div>
-              <div className={`w-full ${isMoistureOptimal ? "bg-teal-600" : "bg-amber-500"} rounded-t-sm h-full`}></div>
-              <div className="w-full bg-slate-200 rounded-t-sm h-3/4"></div>
-            </div>
           </div>
         </div>
         
         <div className="md:col-span-5 bg-slate-100 rounded-3xl p-6 md:p-8 flex flex-col justify-between min-h-[220px] relative overflow-hidden group border border-slate-200">
-          <div className="absolute inset-0 bg-amber-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           <div className="flex justify-between items-start mb-4 relative z-10">
             <div>
               <div className="flex items-center gap-2 mb-1">
@@ -85,23 +108,12 @@ export default function Monitoring() {
                 {isPhOptimal ? "Tingkat Optimal" : "Di Luar Target (5.5 - 6.5)"}
               </p>
             </div>
-            {!isPhOptimal && (
-              <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                <AlertCircle size={14} /> Peringatan
-              </div>
-            )}
           </div>
           <div className="relative z-10">
             <div className="flex items-baseline mb-2">
               <span className={`text-6xl md:text-7xl font-extrabold tracking-tighter ${isPhOptimal ? "text-slate-900" : "text-amber-600"}`}>
                 {sensor.ph_value.toFixed(1)}
               </span>
-            </div>
-            <div className="w-full h-2 bg-slate-300 rounded-full overflow-hidden mt-4">
-              <div className={`h-full rounded-full ${isPhOptimal ? "bg-teal-500" : "bg-amber-500"}`} style={{width: `${(sensor.ph_value / 14) * 100}%`}}></div>
-            </div>
-            <div className="flex justify-between mt-2 text-[10px] text-slate-500 font-bold">
-              <span>0.0</span><span>6.0 (Target)</span><span>14.0</span>
             </div>
           </div>
         </div>
@@ -110,20 +122,23 @@ export default function Monitoring() {
       <section className="mb-12">
         <h3 className="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Notifikasi & Rekomendasi</h3>
         <div className="flex flex-col gap-4">
-          {!isPhOptimal && (
-            <div className="bg-gradient-to-br from-red-700 to-red-600 rounded-3xl p-6 shadow-lg flex items-start gap-5 relative overflow-hidden">
-              <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-              <div className="bg-white/20 p-3 rounded-full flex-shrink-0 backdrop-blur-md text-white">
-                <AlertCircle size={24} />
-              </div>
-              <div className="relative z-10">
-                <h4 className="font-bold text-lg text-white mb-1">Tindakan Diperlukan</h4>
-                <p className="text-white/90 text-sm leading-relaxed mb-4">pH tidak ideal terdeteksi di Sektor Alpha. Tambahkan kapur dolomit jika asam, atau belerang jika basa, untuk mengoptimalkan penyerapan nutrisi akar.</p>
-                <button className="bg-white text-red-700 font-bold text-xs px-5 py-2.5 rounded-full hover:bg-slate-100 transition-colors uppercase tracking-wide">Tandai Selesai</button>
-              </div>
-            </div>
-          )}
-          {isPhOptimal && isMoistureOptimal && (
+          
+          {/* Mapping Data Notifikasi dari Supabase */}
+          {alerts.length > 0 ? alerts.map(alert => (
+             <div key={alert.id} className="bg-gradient-to-br from-red-700 to-red-600 rounded-3xl p-6 shadow-lg flex items-start gap-5 relative overflow-hidden">
+               <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+               <div className="bg-white/20 p-3 rounded-full flex-shrink-0 backdrop-blur-md text-white">
+                 <AlertCircle size={24} />
+               </div>
+               <div className="relative z-10">
+                 <h4 className="font-bold text-lg text-white mb-1">{alert.notifications?.type || 'Peringatan'}</h4>
+                 <p className="text-white/90 text-sm leading-relaxed mb-4">{alert.notifications?.message}</p>
+                 <button onClick={() => handleMarkAsRead(alert.id)} className="bg-white text-red-700 font-bold text-xs px-5 py-2.5 rounded-full hover:bg-slate-100 transition-colors uppercase tracking-wide">
+                   Tandai Selesai
+                 </button>
+               </div>
+             </div>
+          )) : isPhOptimal && isMoistureOptimal && (
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
               <div className="bg-teal-50 p-2.5 rounded-full flex-shrink-0 text-teal-600">
                 <CheckCircle2 size={24} />
@@ -134,6 +149,7 @@ export default function Monitoring() {
               </div>
             </div>
           )}
+
         </div>
       </section>
     </main>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Tractor, ArrowLeft, User, Mail, Lock } from 'lucide-react';
+import { Tractor, ArrowLeft, User, Mail, Lock, Phone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient';
 
@@ -8,6 +8,7 @@ export default function RegisterPage() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async (e) => {
@@ -17,21 +18,26 @@ export default function RegisterPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName } }
+      options: { 
+        data: { 
+          full_name: fullName,
+          phone_number: phoneNumber // Mengirim nomor telepon ke metadata
+        } 
+      }
     });
 
     setLoading(false);
     if (error) {
       alert("Registrasi Gagal: " + error.message);
     } else {
-      alert("Registrasi berhasil! Silakan login.");
-      navigate('/login');
+      navigate('/dashboard'); // Langsung masuk ke dasbor karena "Confirm Email" sudah dimatikan
     }
   };
 
   return (
     <div className="flex-grow flex w-full h-screen">
       <div className="hidden lg:flex lg:w-5/12 relative bg-slate-100 overflow-hidden">
+        {/* Sama seperti kode sebelumnya */}
         <div className="absolute inset-0 w-full h-full bg-cover bg-center" style={{backgroundImage: "url('https://lh3.googleusercontent.com/aida-public/AB6AXuBvuojdY57h3mvyDyG7lf_TYQbcT0ieynVnDQl9EMbpu6Kep07_oZIytKzG9NoNOuvQYl9VAKj2J74dWVLyacz6G6VecwX_jM6NnammDEsEwjAye82O3QWSL9w2Foa9-zrTsOANh96fOhvfj_37WFHj9VPm6SJzrnmXW_7or2imQd9TN0b2ag8SGMmWMuCDO_CEjpouhmq366em075oGSKh_Do7hOdWqV8bK-j8LmZE-NyqOHQebgBc3BmMCtLeLhmF9LCWiadxbaQ')"}}></div>
         <div className="absolute inset-0 bg-gradient-to-t from-red-900/90 via-red-900/40 to-transparent mix-blend-multiply"></div>
         <div className="relative z-10 mt-auto mb-16 ml-12 p-8 bg-white/80 backdrop-blur-md rounded-xl max-w-sm shadow-2xl border border-white/20">
@@ -57,14 +63,21 @@ export default function RegisterPage() {
               <label className="block text-xs uppercase tracking-[0.15em] font-bold text-slate-500">Nama Lengkap</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><User size={18} className="text-slate-400" /></div>
-                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jane Doe" required className="block w-full pl-12 pr-4 py-4 bg-slate-100 border-none rounded-md text-slate-900 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all" />
+                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Salsabila Luthfiyani" required className="block w-full pl-12 pr-4 py-4 bg-slate-100 border-none rounded-md text-slate-900 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs uppercase tracking-[0.15em] font-bold text-slate-500">Nomor Telepon</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Phone size={18} className="text-slate-400" /></div>
+                <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="08123456789" required className="block w-full pl-12 pr-4 py-4 bg-slate-100 border-none rounded-md text-slate-900 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="block text-xs uppercase tracking-[0.15em] font-bold text-slate-500">Alamat Email</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none"><Mail size={18} className="text-slate-400" /></div>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="jane@orchard.co" required className="block w-full pl-12 pr-4 py-4 bg-slate-100 border-none rounded-md text-slate-900 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all" />
+                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="petani@strise.app" required className="block w-full pl-12 pr-4 py-4 bg-slate-100 border-none rounded-md text-slate-900 focus:ring-2 focus:ring-red-500/20 focus:outline-none transition-all" />
               </div>
             </div>
             <div className="space-y-2">

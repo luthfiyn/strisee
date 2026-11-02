@@ -8,7 +8,7 @@ export default function BottomNav({ currentPage, navigate }) {
     <nav className="md:hidden bg-white/90 backdrop-blur-xl text-xs uppercase tracking-widest fixed bottom-0 left-0 w-full z-50 flex justify-around items-end px-2 pb-4 pt-2 shadow-[0_-8px_32px_rgba(0,0,0,0.05)] border-t border-slate-100">
       <button onClick={() => navigate('/dashboard')} className={`flex flex-col items-center justify-center p-2 w-16 transition-colors ${isActive('dashboard') ? 'text-red-700 font-bold' : 'text-slate-500'}`}>
         <LayoutDashboard size={24} className="mb-1" />
-        <span>Dasbor</span>
+        <span>Dashboard</span>
       </button>
       <button onClick={() => navigate('/monitoring')} className={`flex flex-col items-center justify-center p-2 w-16 transition-colors ${isActive('monitoring') ? 'text-red-700 font-bold' : 'text-slate-500'}`}>
         <ChartNoAxesCombined size={24} className="mb-1" />
