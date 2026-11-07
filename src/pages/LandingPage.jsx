@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Droplet, Microscope, ShieldAlert, Radio, TrendingUp } from 'lucide-react';
+import imgLandingPage from '../assets/img_landingpage.jpg';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -23,13 +24,16 @@ export default function LandingPage() {
             >
               Mulai Sekarang
             </button>
-            <button className="bg-teal-100 text-teal-800 font-bold text-lg px-8 py-4 rounded-xl hover:bg-teal-200 transition-all">
+            <button 
+              onClick={() => navigate('/learn-more')}
+              className="bg-teal-100 text-teal-800 font-bold text-lg px-8 py-4 rounded-xl hover:bg-teal-200 transition-all"
+            >
               Pelajari Lebih Lanjut
             </button>
           </div>
         </div>
         <div className="md:w-1/2 h-96 md:h-auto relative min-h-[500px] w-full">
-          <img alt="Lush red strawberries on a vine" className="absolute inset-0 w-full h-full object-cover rounded-l-[4rem] md:rounded-l-[8rem] rounded-r-xl shadow-[-32px_0_64px_-12px_rgba(25,28,30,0.08)]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC392McVr108-hwGhalGkZfsvcoNP9yGZhD2P_7Ms9MiF7elOztjPIeX37YO6L8n87XDYGV2XV2CSeN7JTJa0YuAZNjDXFIbycxnFxVHx6YyyIapBONoo05S_QCptxPCNShyW0AMp_-MInUutZX0IcV3B9GiVGkDQZFYclSMqupV-iAjUL9Qms90uvva8m6R1YkVGc066sWmmbioyRVAayvmbnSRMAjEENLF-lDbOuAqgaV59atfZBKtaMj-XJ3zt2X8cAMIWVGWXA"/>
+          <img alt="Lush red strawberries on a vine" className="absolute inset-0 w-full h-full object-cover rounded-l-[4rem] md:rounded-l-[8rem] rounded-r-xl shadow-[-32px_0_64px_-12px_rgba(25,28,30,0.08)]" src={imgLandingPage}/>
           <div className="absolute bottom-8 right-8 bg-white/80 backdrop-blur-md p-6 rounded-xl shadow-xl flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-teal-100 flex items-center justify-center">
               <Droplet className="text-teal-700" size={24} />
