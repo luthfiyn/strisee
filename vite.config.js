@@ -19,6 +19,7 @@ export default defineConfig({
       },
       workbox: {
         // Memastikan file tflite dan wasm ikut di-cache agar PWA bisa berjalan offline
+        maximumFileSizeToCacheInBytes: 50000000,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,tflite,wasm}'], 
       }
     })
