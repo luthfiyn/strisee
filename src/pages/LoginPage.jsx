@@ -5,21 +5,16 @@ import { supabase } from '../supabaseClient';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  // State ini sekarang menampung Email ATAU Nomor Telepon
   const [identifier, setIdentifier] = useState(''); 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Fungsi untuk mengecek apakah inputan adalah nomor telepon atau email
   const isPhoneNumber = (text) => {
-    // Menghapus semua karakter kecuali angka dan '+'
     const cleanText = text.replace(/[^\d+]/g, '');
-    // Jika sisa karakternya cukup panjang dan hanya berisi angka/+, anggap ini nomor telepon
     return cleanText.length >= 10 && /^[0-9+]+$/.test(cleanText);
   };
 
-  // Fungsi untuk memformat nomor '08...' menjadi '+628...' standar Supabase
   const formatPhone = (phone) => {
     let clean = phone.replace(/\D/g, '');
     if (clean.startsWith('0')) {
@@ -38,7 +33,6 @@ export default function LoginPage() {
     
     let loginData = { password };
 
-    // Deteksi cerdas: Apakah user memasukkan Email atau No. Telepon?
     if (isPhoneNumber(identifier)) {
       loginData.phone = formatPhone(identifier);
     } else {
@@ -66,7 +60,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white rounded-[2rem] shadow-xl p-8 md:p-12 border border-slate-100">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Selamat Datang</h1>
-          <p className="text-slate-500 text-sm">Akses dashboard perkebunan presisi Anda.</p>
+          <p className="text-slate-500 text-sm">Akses dashboard perkebunan stroberi Anda.</p>
         </div>
 
         {errorMsg && (
@@ -77,7 +71,6 @@ export default function LoginPage() {
 
         <form className="space-y-6" onSubmit={handleLogin}>
           <div>
-            {/* Label diperbarui untuk mencerminkan dua fungsi */}
             <label className="block text-sm font-semibold text-slate-900 mb-2">Email</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

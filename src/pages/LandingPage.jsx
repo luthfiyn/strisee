@@ -10,19 +10,19 @@ export default function LandingPage() {
       <section className="relative bg-slate-100 rounded-xl overflow-hidden flex flex-col md:flex-row items-center justify-between">
         <div className="p-8 md:p-16 md:w-1/2 z-10">
           <h1 className="text-5xl md:text-7xl font-black text-slate-900 leading-tight tracking-tighter mb-6">
-            Kecerdasan <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-700 to-red-500">Perkebunan</span> <br/>
-            Presisi.
+            Rawat <br/>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-700 to-red-500">Stroberi</span> <br/>
+            dengan Kecerdasan Buatan.
           </h1>
           <p className="text-slate-600 text-lg md:text-xl mb-8 max-w-md">
-            Deteksi penyakit canggih dan pemantauan lingkungan untuk petani modern. Tingkatkan vitalitas dengan ketelitian ilmiah.
+            Lindungi kebun Anda melalui deteksi penyakit dini dan pemantauan tanah real-time. Solusi cerdas untuk hasil panen yang lebih maksimal.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <button 
               onClick={() => navigate('/register')}
               className="bg-gradient-to-r from-red-700 to-red-600 text-white font-bold text-lg px-8 py-4 rounded-xl shadow-lg hover:-translate-y-1 transition-all"
             >
-              Mulai Sekarang
+              Coba Strise Sekarang
             </button>
             <button 
               onClick={() => navigate('/learn-more')}
@@ -55,7 +55,7 @@ export default function LandingPage() {
             <ShieldAlert size={28} />
           </div>
           <h3 className="text-xl font-bold text-slate-900 mb-3">Deteksi Dini</h3>
-          <p className="text-slate-600 text-sm">Gunakan visi komputer tingkat lanjut untuk mengidentifikasi hawar dan hama beberapa hari sebelum menyebar.</p>
+          <p className="text-slate-600 text-sm">Pindai daun atau buah stroberi untuk mendeteksi indikasi penyakit dan hama lebih awal sebelum menyebar luas.</p>
         </div>
         <div className="bg-slate-100 p-8 rounded-xl relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -64,18 +64,18 @@ export default function LandingPage() {
           <div className="w-14 h-14 rounded-xl bg-teal-200 text-teal-800 flex items-center justify-center mb-6">
             <Radio size={28} />
           </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-3">Pelacakan Mikro-Iklim</h3>
-          <p className="text-slate-600 text-sm">Pemantauan terus-menerus terhadap pH, kelembapan, dan suhu di zona akar untuk kontrol lingkungan yang presisi.</p>
+          <h3 className="text-xl font-bold text-slate-900 mb-3">Monitoring Kebun Stroberi</h3>
+          <p className="text-slate-600 text-sm">Pantau pH dan kelembapan tanah secara real-time untuk memastikan lingkungan tumbuh yang paling ideal.</p>
         </div>
         <div className="bg-slate-200 p-8 rounded-xl relative overflow-hidden group hover:-translate-y-2 transition-transform duration-300">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <TrendingUp size={64} className="text-amber-700" />
           </div>
           <div className="w-14 h-14 rounded-xl bg-amber-200 text-amber-800 flex items-center justify-center mb-6">
-            <ShieldAlert size={28} />
+            <TrendingUp size={28} />
           </div>
           <h3 className="text-xl font-bold text-slate-900 mb-3">Prediksi Hasil Panen</h3>
-          <p className="text-slate-600 text-sm">Wawasan berbasis data untuk memperkirakan jadwal panen dan mengoptimalkan pengiriman nutrisi demi kualitas puncak.</p>
+          <p className="text-slate-600 text-sm">Dapatkan rekomendasi penanganan dan wawasan berbasis data untuk menjaga kualitas tanaman Anda.</p>
         </div>
       </section>
     </div>

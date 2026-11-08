@@ -6,14 +6,12 @@ import { useLocation } from 'react-router-dom';
 export default function TopHeader({ navigate, isLogged }) {
   const location = useLocation();
   
-  // Helper function untuk highlight active state
   const isActive = (path) => location.pathname === path;
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-100">
       <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto w-full">
         
-        {/* PERBAIKAN: Pemanggilan ikon Strawberry menggunakan <Icon iconNode={...} /> */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(isLogged ? '/dashboard' : '/')}>
           <Icon iconNode={strawberry} className="text-red-700" size={28} />
           <span className="text-2xl font-black text-red-700 tracking-tighter">Strise</span>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Scan, Droplets, Leaf, ShieldCheck, Cpu } from 'lucide-react';
-import imgKebun from '../assets/img_dashboard.jpg'; // Gunakan gambar kebun yang sudah ada
+import imgKebun from '../assets/img_dashboard.jpg'; 
 
 export default function LearnMorePage() {
   const navigate = useNavigate();
@@ -9,7 +9,6 @@ export default function LearnMorePage() {
   return (
     <div className="bg-slate-50 min-h-screen font-sans text-slate-900 pb-32">
       
-      {/* Header Sederhana */}
       <header className="sticky top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-4">
           <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-100 transition-colors">
@@ -21,10 +20,8 @@ export default function LearnMorePage() {
 
       <main className="max-w-5xl mx-auto px-6 mt-8 md:mt-12">
         
-        {/* HERO SECTION YANG LEBIH ORGANIK */}
         <section className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-slate-100 mb-8 md:mb-12 flex flex-col md:flex-row items-center gap-8 md:gap-12">
           
-          {/* Teks Kiri */}
           <div className="flex-1 order-2 md:order-1">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 text-red-700 text-xs font-bold tracking-wider mb-6">
               <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
@@ -37,14 +34,12 @@ export default function LearnMorePage() {
             </h2>
             
             <p className="text-slate-600 text-lg leading-relaxed mb-8 max-w-md">
-              Strise hadir dari sebuah keresahan sederhana di kebun: betapa sulitnya mendeteksi penyakit daun sebelum ia menyebar luas. Kami menggabungkan kamera ponsel biasa dengan sensor tanah IoT untuk memberikan Anda asisten kebun digital yang bekerja 24 jam.
+              Strise lahir dari kepedulian terhadap para petani. Kami memadukan kemudahan kamera ponsel cerdas dengan sensor IoT untuk mendeteksi ancaman penyakit sejak dini, layaknya asisten ahli agronomi di genggaman Anda.
             </p>
             
           </div>
 
-          {/* Gambar Kanan (Gaya Polaroid/Organik) */}
           <div className="w-full md:w-5/12 order-1 md:order-2 relative">
-            {/* Dekorasi Latar */}
             <div className="absolute inset-0 bg-red-100 rounded-[3rem] rotate-6 transform scale-105 -z-10"></div>
             
             <div className="aspect-[4/5] w-full rounded-[2.5rem] overflow-hidden shadow-xl border-4 border-white relative group">
@@ -61,7 +56,6 @@ export default function LearnMorePage() {
         </section>
 
 
-        {/* FITUR UTAMA (Cards yang Lebih Santai) */}
         <section className="mb-12">
           <div className="text-center mb-10">
             <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Bagaimana Strise Bekerja?</h3>
@@ -70,18 +64,16 @@ export default function LearnMorePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
-            {/* Kartu 1: AI */}
             <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:-translate-y-1 transition-transform group">
               <div className="w-14 h-14 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Scan size={28} />
               </div>
-              <h4 className="text-xl font-bold text-slate-900 mb-3">Mata Digital YOLOv12</h4>
+              <h4 className="text-xl font-bold text-slate-900 mb-3">Deteksi Instan dengan AI</h4>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Arahkan kamera ke daun atau buah yang mencurigakan. Tanpa perlu koneksi internet berkecepatan tinggi, model AI lokal di dalam aplikasi akan langsung mengenali spora dan bercak penyakit.
+                Arahkan kamera ke daun atau buah yang mencurigakan. Strise akan menganalisis dan memberi tahu Anda apakah ada indikasi penyakit atau hama, lengkap dengan tingkat keparahannya.
               </p>
             </div>
 
-            {/* Kartu 2: IoT */}
             <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:-translate-y-1 transition-transform group">
               <div className="w-14 h-14 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Cpu size={28} />
@@ -92,7 +84,6 @@ export default function LearnMorePage() {
               </p>
             </div>
 
-            {/* Kartu 3: Agronomi */}
             <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:-translate-y-1 transition-transform group">
               <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <Leaf size={28} />

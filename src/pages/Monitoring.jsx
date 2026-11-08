@@ -21,14 +21,13 @@ export default function Monitoring() {
         {requireAttention && (
           <div className="absolute top-4 right-4 bg-white/80 backdrop-blur-xl px-4 py-2 rounded-full shadow flex items-center gap-2 transition-all">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse"></span>
-            <span className="text-xs font-bold text-slate-900">Perhatian Diperlukan</span>
+            <span className="text-xs font-bold text-slate-900">Tindakan Diperlukan</span>
           </div>
         )}
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 mb-10">
         
-        {/* KARTU TREN KELEMBABAN (Kiri) */}
         <div className="md:col-span-7 bg-white rounded-3xl p-6 md:p-8 flex flex-col justify-between min-h-[220px] shadow-sm border border-slate-100 transition-colors">
           <div className="flex justify-between items-start mb-4 relative z-10">
             <div>
@@ -37,7 +36,7 @@ export default function Monitoring() {
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">Tren Kelembaban</h3>
               </div>
               <p className={`text-sm font-medium transition-colors ${isMoistureOptimal ? "text-teal-700" : "text-amber-700"}`}>
-                {isMoistureOptimal ? "Tingkat Optimal" : "Di Luar Target (60 - 80%)"}
+                {isMoistureOptimal ? "Kondisi Ideal" : "Batas Kritis (60 - 80%)"}
               </p>
             </div>
           </div>
@@ -50,19 +49,16 @@ export default function Monitoring() {
               <span className="text-2xl font-bold text-slate-400 ml-1">%</span>
             </div>
             
-            {/* VISUALISASI BLOK BAR KELEMBABAN */}
             <div className="flex items-end gap-1.5 md:gap-2 h-12 pb-1 md:pb-2 opacity-80">
               <div className="w-4 h-4 md:w-5 bg-slate-100 rounded-[3px]"></div>
               <div className="w-4 h-6 md:w-5 bg-slate-100 rounded-[3px]"></div>
               <div className="w-4 h-8 md:w-5 bg-slate-100 rounded-[3px]"></div>
-              {/* Balok yang aktif (warna menyesuaikan status) */}
               <div className={`w-5 h-12 md:w-6 rounded-[3px] shadow-sm ${isMoistureOptimal ? 'bg-teal-600' : 'bg-amber-500'}`}></div>
               <div className="w-4 h-9 md:w-5 bg-slate-100 rounded-[3px]"></div>
             </div>
           </div>
         </div>
         
-        {/* KARTU pH TANAH (Kanan) */}
         <div className="md:col-span-5 bg-slate-100 rounded-3xl p-6 md:p-8 flex flex-col justify-between min-h-[220px] relative overflow-hidden group border border-slate-200 transition-colors">
           <div className="flex justify-between items-start mb-4 relative z-10">
             <div>
@@ -71,7 +67,7 @@ export default function Monitoring() {
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500">pH Tanah</h3>
               </div>
               <p className={`text-sm font-medium transition-colors ${isPhOptimal ? "text-teal-700" : "text-amber-700"}`}>
-                {isPhOptimal ? "Tingkat Optimal" : "Di Luar Target (5.5 - 6.5)"}
+                {isPhOptimal ? "Kondisi Ideal" : "Batas Kritis (5.5 - 6.5)"}
               </p>
             </div>
           </div>
@@ -83,10 +79,8 @@ export default function Monitoring() {
               </span>
             </div>
             
-            {/* VISUALISASI SLIDER LINE pH */}
             <div className="w-full">
               <div className="h-2 w-full bg-slate-200/80 rounded-full relative">
-                {/* Panjang dan warna garis menyesuaikan nilai secara proporsional */}
                 <div 
                   className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-500 ${isPhOptimal ? 'bg-teal-600' : 'bg-amber-500'}`}
                   style={{ width: `${Math.max(0, Math.min(100, ((sensor.ph_value - 4) / 4) * 100))}%` }}
@@ -125,7 +119,7 @@ export default function Monitoring() {
                 <CheckCircle2 size={24} />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-sm">Lingkungan Optimal</h4>
+                <h4 className="font-bold text-slate-900 text-sm">Sensor Tanah Optimal</h4>
                 <p className="text-slate-500 text-xs mt-0.5">Sistem irigasi dan pH berjalan sesuai target. Tidak ada tindakan yang diperlukan.</p>
               </div>
             </div>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { LayoutDashboard, ChartNoAxesCombined, Camera, History, User } from 'lucide-react';
 
 export default function BottomNav({ currentPage, navigate }) {

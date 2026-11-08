@@ -14,7 +14,6 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Validasi agar hanya angka & dimulai dari 08
   const handlePhoneChange = (e) => {
     let val = e.target.value.replace(/\D/g, ''); 
     if (val.length > 0 && val[0] !== '0') val = '0' + val;
@@ -22,7 +21,6 @@ export default function ForgotPasswordPage() {
     setPhone(val);
   };
 
-  // Mengubah '0812...' menjadi '+62812...'
   const formatPhoneForSupabase = () => '+62' + phone.substring(1);
 
   const handleRequestOtp = async (e) => {
@@ -123,7 +121,7 @@ export default function ForgotPasswordPage() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Kata Sandi Baru</label>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Buat Kata Sandi Baru</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Lock size={18} className="text-slate-400" /></div>
                 <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Minimal 6 karakter" required className="block w-full pl-10 pr-3 py-3 bg-slate-100 border-0 rounded-md text-slate-900 focus:ring-2 focus:ring-red-700" />

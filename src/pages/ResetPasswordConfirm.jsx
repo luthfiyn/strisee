@@ -11,9 +11,6 @@ export default function ResetPasswordConfirm() {
   const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
-    // Supabase secara otomatis akan menangkap token dari URL (hash)
-    // saat pengguna diarahkan kembali dari email.
-    // Kita bisa mengecek apakah user berhasil masuk dengan token tersebut.
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -41,8 +38,6 @@ export default function ResetPasswordConfirm() {
     setMessage('');
 
     try {
-      // Mengubah kata sandi untuk pengguna yang saat ini sedang login 
-      // (yang loginnya dilakukan secara otomatis via tautan email)
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });
@@ -66,7 +61,7 @@ export default function ResetPasswordConfirm() {
             <div className="text-center mb-10">
               <h1 className="text-3xl font-bold text-slate-900 mb-2">Buat Sandi Baru</h1>
               <p className="text-slate-500 text-sm">
-                Masukkan kata sandi baru untuk mengamankan kembali akun Strise Anda.
+                Masukkan kata sandi baru.
               </p>
             </div>
 
@@ -112,7 +107,7 @@ export default function ResetPasswordConfirm() {
             <div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">Kata Sandi Diperbarui!</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                Kata sandi akun Anda telah berhasil diubah. Sekarang Anda dapat mengakses kembali pemantauan kebun Anda.
+                Kata sandi akun Anda telah berhasil diubah. Silakan masuk kembali menggunakan kata sandi baru Anda.
               </p>
             </div>
             <button 

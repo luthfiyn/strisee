@@ -94,10 +94,8 @@ export default function HistoryDetail() {
       
       <main className="relative z-10 -mt-20 md:-mt-32 px-6 md:px-12 max-w-4xl mx-auto">
         
-        {/* PERBAIKAN LAYOUT BANNER UTAMA */}
         <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl mb-12 border border-slate-100 flex items-start justify-between gap-4">
           
-          {/* Kolom Kiri: Judul dan Status */}
           <div className="flex flex-col items-start flex-1 pr-2">
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight mb-4">
               {result?.name || "Penyakit"}
@@ -109,7 +107,6 @@ export default function HistoryDetail() {
             </span>
           </div>
           
-          {/* Kolom Kanan: Akurasi AI */}
           <div className="flex flex-col items-center bg-red-50 text-red-800 px-4 py-3 md:px-5 md:py-4 rounded-2xl shrink-0 min-w-[80px] md:min-w-[100px]">
             <span className="text-[10px] md:text-xs uppercase tracking-widest font-bold mb-1 opacity-80 text-center">Akurasi<br/>AI</span>
             <span className="text-2xl md:text-3xl font-bold leading-none">{(detail.confidence * 100).toFixed(0)}%</span>
@@ -118,7 +115,7 @@ export default function HistoryDetail() {
         </div>
 
         <section className="mb-14">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Gejala Teridentifikasi</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Indikasi Gejala</h2>
           <div className="flex items-start gap-4 p-5 bg-slate-50 rounded-2xl">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 text-red-600 mt-1"><Circle size={20} /></div>
             <p className="text-slate-600 leading-relaxed whitespace-pre-line">{result?.symptoms}</p>
@@ -126,7 +123,7 @@ export default function HistoryDetail() {
         </section>
 
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Rencana Penanganan</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Rekomendasi Penanganan</h2>
           <div className="flex items-start gap-4 p-5 bg-white rounded-2xl shadow-sm border border-slate-100">
             <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center shrink-0 text-teal-700 mt-1">
               <Icon iconNode={strawberry} className="w-5 h-5" />
@@ -135,7 +132,6 @@ export default function HistoryDetail() {
           </div>
         </section>
 
-        {/* AREA TOMBOL AKSI */}
         <section className="mt-8 mb-4 border-t border-slate-200 pt-8 flex flex-col gap-3">
           <button 
             onClick={toggleStatus} 

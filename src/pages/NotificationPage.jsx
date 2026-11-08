@@ -34,7 +34,6 @@ export default function NotificationPage() {
 
     fetchNotifications();
 
-    // Opsional: Realtime listener jika ada notifikasi baru masuk
     const channel = supabase
       .channel('public:notifications')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, payload => {
@@ -47,7 +46,6 @@ export default function NotificationPage() {
     };
   }, []);
 
-  // Mengecek apakah masih ada notifikasi yang belum dibaca
   const hasUnread = notifications.some(n => !n.is_read);
 
   // 2. FUNGSI UNTUK MENANDAI SEMUA DIBACA (DI DATABASE & LOKAL)
@@ -65,7 +63,6 @@ export default function NotificationPage() {
 
       if (error) throw error;
 
-      // Update tampilan lokal
       setNotifications(notifications.map(n => ({ ...n, is_read: true })));
     } catch (err) {
       console.error("Gagal menandai semua dibaca:", err.message);
@@ -136,7 +133,7 @@ export default function NotificationPage() {
               className={`h-10 px-4 md:px-5 rounded-full flex items-center gap-2 transition-colors text-sm font-bold ${!hasUnread ? 'bg-slate-100 text-slate-400' : 'bg-teal-50 hover:bg-teal-100 text-teal-700'}`}
             >
               <CheckCircle2 size={18} />
-              <span className="hidden sm:block">{!hasUnread ? 'Semua Dibaca' : 'Tandai Dibaca'}</span>
+              <span className="hidden sm:block">{!hasUnread ? 'Semua Dibaca' : 'Tandai Semua Selesai'}</span>
             </button>
           </div>
         </div>
@@ -145,7 +142,6 @@ export default function NotificationPage() {
       <main className="pt-24 md:pt-28 pb-32 px-4 md:px-8 max-w-3xl mx-auto w-full min-h-screen">
         <div className="flex flex-col gap-6">
           
-          {/* Status Bar Sederhana */}
           <section className="px-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Kotak Masuk</span>
@@ -153,7 +149,6 @@ export default function NotificationPage() {
             </div>
           </section>
 
-          {/* Filter Chips Minimalis */}
           <section className="w-full overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2 min-w-max px-2 md:px-0">
               <button onClick={() => setActiveFilter('all')} className={`px-5 py-2 rounded-full text-sm font-bold transition-colors ${activeFilter === 'all' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>Semua</button>
@@ -161,12 +156,11 @@ export default function NotificationPage() {
                 Penting
               </button>
               <button onClick={() => setActiveFilter('environment')} className={`px-5 py-2 rounded-full text-sm font-bold transition-colors flex items-center gap-2 ${activeFilter === 'environment' ? 'bg-amber-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>
-                Lingkungan
+                Sensor Tanah
               </button>
             </div>
           </section>
 
-          {/* Daftar Notifikasi */}
           <div className="flex flex-col gap-4">
             {loading ? (
               <div className="py-20 flex justify-center items-center">

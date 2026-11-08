@@ -44,10 +44,8 @@ function Layout() {
   const navigate = useNavigate();
   const path = location.pathname;
 
-  // PENANGKAP OTOMATIS: Mendeteksi jika user datang dari link email reset password
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      // Jika event adalah pemulihan sandi, paksa pindah ke halaman reset
       if (event === 'PASSWORD_RECOVERY') {
         navigate('/reset-password-confirm', { replace: true });
       }
@@ -65,7 +63,6 @@ function Layout() {
   const isLearnMore = path === '/learn-more';
   const isNotification = path === '/notifications';
   
-  // Menyembunyikan navigasi global di halaman yang tidak membutuhkannya
   const hideTopHeader = isAuthPage || isDiagnostic || isHistoryDetail || isLearnMore || isNotification;
   const hideBottomNav = isAuthPage || isLanding || isDiagnostic || isHistoryDetail || isLearnMore || isNotification;
   
@@ -76,17 +73,17 @@ function Layout() {
       {!hideTopHeader && <TopHeader navigate={navigate} isLogged={isLogged} />}
       
       <Routes>
-        {/* RUTE PUBLIK */}
+        //public routes
         <Route path="/" element={<LandingPage />} />
         <Route path="/learn-more" element={<LearnMorePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         
-        {/* Rute khusus pemulihan sandi (tersembunyi dari navigasi umum) */}
+        //reset password route
         <Route path="/reset-password-confirm" element={<ResetPasswordConfirm />} />
         
-        {/* RUTE PRIVAT */}
+        //protected routes
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/monitoring" element={<ProtectedRoute><Monitoring /></ProtectedRoute>} />
         <Route path="/diagnostic" element={<ProtectedRoute><DiagnosticResult /></ProtectedRoute>} />

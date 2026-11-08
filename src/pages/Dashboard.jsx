@@ -27,7 +27,7 @@ export default function Dashboard() {
     <main className="pt-24 px-6 max-w-7xl mx-auto flex flex-col gap-8 md:px-12 w-full pb-32">
       <section className="flex flex-col gap-2 mt-4">
         <h2 className="font-extrabold text-4xl text-slate-900 tracking-tight">Halo, {userName}!</h2>
-        <p className="text-slate-500 text-lg">Kebun Anda tumbuh subur hari ini.</p>
+        <p className="text-slate-500 text-lg">Pantau kesehatan kebun stroberi Anda hari ini.</p>
       </section>
       
       <section className="relative w-full h-64 md:h-80 rounded-[2rem] overflow-hidden shadow-xl group">
@@ -37,7 +37,7 @@ export default function Dashboard() {
           <div>
             <p className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">Status Kebun</p>
             <h3 className={`font-bold text-xl flex items-center gap-2 transition-colors ${isOptimal ? 'text-teal-700' : 'text-amber-700'}`}>
-              <Icon iconNode={strawberry} className="w-5 h-5" /> {isOptimal ? "Kondisi Optimal" : "Perlu Perhatian"}
+              <Icon iconNode={strawberry} className="w-5 h-5" /> {isOptimal ? "Kondisi Optimal" : "Butuh Tindakan"}
             </h3>
           </div>
           <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${isOptimal ? 'bg-teal-100 text-teal-800' : 'bg-amber-100 text-amber-800'}`}>
@@ -111,11 +111,10 @@ export default function Dashboard() {
         </div>
       </section>
 
-
       <section className="mt-8 flex justify-center pb-8">
         <button onClick={() => navigate('/diagnostic')} className="bg-gradient-to-r from-red-700 to-red-600 text-white rounded-[1.5rem] px-10 py-5 shadow-[0_16px_32px_rgba(183,16,42,0.25)] flex items-center justify-center gap-3 hover:scale-[1.02] active:scale-95 transition-all w-full md:w-auto md:min-w-[320px] relative overflow-hidden">
           <Scan size={24} />
-          <span className="font-bold tracking-wide text-lg">Pindai Tanaman</span>
+          <span className="font-bold tracking-wide text-lg">Mulai Pindai Tanaman</span>
         </button>
       </section>
     </main>

@@ -4,7 +4,6 @@ import { ArrowLeft, Circle, Save, Scan, Loader2, Icon } from 'lucide-react';
 import { strawberry } from '@lucide/lab';
 import { supabase } from '../supabaseClient';
 
-// 1. IMPORT GAMBAR DARI FOLDER ASSETS LOKAL
 import imgAngularLeafspot from '../assets/angular_leafspot.jpg';
 import imgAnthracnose from '../assets/anthracnose_fruit_rot.jpg';
 import imgBlossomBlight from '../assets/blossom_blight.jpg';
@@ -25,8 +24,6 @@ export const DISEASE_IMAGES = {
   default: 'https://cs-assets.bayer.com/is/image/bayer/TP-2024012705'
 };
 
-// 3. VARIABEL MEMORI GLOBAL UNTUK MODEL AI 
-// (Mencegah pemuatan ulang file .tflite saat keluar-masuk halaman kamera)
 let globalAiModel = null;
 let isInitializing = false;
 
@@ -54,14 +51,12 @@ export default function DiagnosticResult() {
     startCamera();
 
     const initAI = async () => {
-      // Batal jika model sudah tersimpan atau sedang diproses
       if (globalAiModel || isInitializing) return;
       isInitializing = true;
 
       try {
         if (!window.tflite) throw new Error("Mesin TFLite belum selesai diunduh, coba sesaat lagi.");
         
-        // Path WASM diset manual karena library dipanggil dari CDN (index.html)
         window.tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite/dist/');
         
         const loadedModel = await window.tflite.loadTFLiteModel('/yolov12-strise.tflite');
@@ -75,7 +70,6 @@ export default function DiagnosticResult() {
       }
     };
 
-    // Jalankan inisialisasi hanya jika model belum termuat
     if (!model) initAI();
 
     return () => {
@@ -90,7 +84,6 @@ export default function DiagnosticResult() {
     setIsScanning(true); 
     setErrorMsg("");
     
-    // Memberikan waktu bagi React untuk mengubah UI tombol menjadi "Menganalisis..."
     await new Promise(r => setTimeout(r, 50));
 
     try {
@@ -157,14 +150,11 @@ export default function DiagnosticResult() {
     }
   };
 
-  // -------------------------------------------------------------
-  // TAMPILAN 1: MODE KAMERA (BINGKAI PEMINDAI)
-  // -------------------------------------------------------------
+  //kamera
   if (!result) {
     return (
       <div className="h-screen bg-black flex flex-col relative overflow-hidden">
         
-        {/* Header Kamera */}
         <header className="absolute top-0 w-full z-50 flex justify-between items-center p-6 pointer-events-auto">
           <button onClick={() => navigate(-1)} className="w-12 h-12 flex items-center justify-center bg-white/90 backdrop-blur-md rounded-full shadow-lg text-slate-900 active:scale-95 transition-transform">
             <ArrowLeft size={24} />
@@ -175,17 +165,14 @@ export default function DiagnosticResult() {
           </div>
         </header>
 
-        {/* Pesan Error (Jika Ada) */}
         {errorMsg && (
           <div className="absolute top-24 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-red-100/90 backdrop-blur-md text-red-800 p-4 rounded-xl text-center text-sm font-bold z-50 shadow-xl">
             {errorMsg}
           </div>
         )}
 
-        {/* Video Kamera */}
         <video ref={videoRef} autoPlay playsInline muted className="w-full h-[75vh] object-cover" />
         
-        {/* Bingkai Pemindai (Scanner Frame) dengan efek bayangan luar */}
         <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[75%] max-w-xs h-[40vh] border border-white/20 rounded-2xl pointer-events-none z-30 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]">
           <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-red-500 rounded-tl-xl"></div>
           <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-red-500 rounded-tr-xl"></div>
@@ -193,14 +180,12 @@ export default function DiagnosticResult() {
           <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-red-500 rounded-br-xl"></div>
         </div>
 
-        {/* Petunjuk Melayang */}
         <div className="absolute top-[65%] w-full flex justify-center z-30 px-6">
            <span className="bg-black/60 backdrop-blur-md text-white px-5 py-2.5 rounded-full text-sm font-medium shadow-lg border border-white/10 text-center animate-bounce">
-             Arahkan kamera ke daun atau buah
+             Arahkan kamera ke daun atau buah yang terindikasi penyakit
            </span>
         </div>
 
-        {/* Panel Bawah (Tombol Aksi) */}
         <div className="bg-white flex-1 -mt-6 rounded-t-[2.5rem] p-6 flex flex-col items-center justify-center z-40 shadow-[0_-10px_40px_rgba(0,0,0,0.3)]">
           {!model ? (
             <div className="flex flex-col items-center gap-3 text-slate-500">
@@ -216,7 +201,7 @@ export default function DiagnosticResult() {
               {isScanning ? (
                 <>
                   <Loader2 size={28} className="animate-spin" />
-                  <span className="font-bold text-lg">Menganalisis...</span>
+                  <span className="font-bold text-lg">Mendeteksi Gejala...</span>
                 </>
               ) : (
                 <>
@@ -231,10 +216,7 @@ export default function DiagnosticResult() {
     );
   }
 
-  // -------------------------------------------------------------
-  // TAMPILAN 2: HASIL DETEKSI AI
-  // -------------------------------------------------------------
-  const displayImage = DISEASE_IMAGES[result.disease_catalog_id] || DISEASE_IMAGES.default;
+ const displayImage = DISEASE_IMAGES[result.disease_catalog_id] || DISEASE_IMAGES.default;
 
   return (
     <div className="pb-32 bg-slate-50 min-h-screen">
@@ -249,7 +231,6 @@ export default function DiagnosticResult() {
       
       <main className="relative z-10 -mt-20 px-6 max-w-4xl mx-auto">
         
-        {/* Banner Utama */}
         <div className="bg-white rounded-3xl p-8 shadow-xl mb-12 border border-slate-100">
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="flex-1 pr-4">
@@ -264,7 +245,7 @@ export default function DiagnosticResult() {
 
         {/* Informasi Gejala */}
         <section className="mb-14">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Gejala Teridentifikasi</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Indikasi Gejala</h2>
           <div className="flex items-start gap-4 p-5 bg-white rounded-2xl shadow-sm border border-slate-100">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 text-red-600 mt-1">
               <Circle size={20} />
@@ -273,9 +254,8 @@ export default function DiagnosticResult() {
           </div>
         </section>
 
-        {/* Solusi/Penanganan */}
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Rencana Penanganan</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Rekomendasi Penanganan</h2>
           <div className="flex items-start gap-4 p-5 bg-white rounded-2xl shadow-sm border border-slate-100">
             <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center shrink-0 text-teal-700 mt-1">
               <Icon iconNode={strawberry} className="w-5 h-5" />
@@ -285,7 +265,6 @@ export default function DiagnosticResult() {
         </section>
       </main>
 
-      {/* Tombol Simpan/Lanjutkan */}
       <div className="fixed bottom-0 left-0 w-full z-40 bg-white/90 backdrop-blur-md pt-4 pb-6 px-6 flex justify-center border-t border-slate-100">
         <button onClick={() => navigate('/history')} className="w-full max-w-4xl relative rounded-2xl bg-gradient-to-r from-red-700 to-red-600 text-white py-5 px-8 shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 hover:scale-[1.01]">
           <Save size={24} />

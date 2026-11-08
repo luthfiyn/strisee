@@ -40,7 +40,7 @@ export default function HistoryPage() {
     <main className="pt-24 md:pt-28 pb-32 px-4 md:px-8 max-w-5xl mx-auto w-full">
       <div className="mb-10 mt-4">
         <h1 className="font-extrabold text-4xl text-slate-900 mb-2 tracking-tight">Riwayat Diagnosa</h1>
-        <p className="text-slate-500 mb-8 text-sm max-w-md">Tinjau riwayat pemindaian lingkungan dan status penanganannya.</p>
+        <p className="text-slate-500 mb-8 text-sm max-w-md">Pantau riwayat deteksi penyakit dan status penanganannya.</p>
         <div className="relative max-w-xl">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
           <input 
@@ -57,7 +57,7 @@ export default function HistoryPage() {
         {filteredHistory.length > 0 ? filteredHistory.map(item => {
           const catalog = item.disease_catalogs;
           const timestamp = item.scanned_at;
-          const isHandled = item.is_handled; // Menarik status dari Supabase
+          const isHandled = item.is_handled; 
           
           const imageSrc = DISEASE_IMAGES && catalog ? (DISEASE_IMAGES[catalog.id] || DISEASE_IMAGES.default) : 'https://cs-assets.bayer.com/is/image/bayer/TP-2024012705';
 
@@ -97,7 +97,7 @@ export default function HistoryPage() {
             </article>
           );
         }) : (
-          <p className="text-slate-400 font-medium">Tidak ada riwayat diagnosa yang ditemukan.</p>
+          <p className="text-slate-400 font-medium">Belum ada riwayat deteksi penyakit yang tersimpan.</p>
         )}
       </div>
     </main>
