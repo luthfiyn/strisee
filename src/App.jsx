@@ -19,6 +19,7 @@ import HistoryDetail from './pages/HistoryDetail';
 import ProfilePage from './pages/ProfilePage';
 import LearnMorePage from './pages/LearnMorePage';
 import NotificationPage from './pages/NotificationPage';
+import MonitoringHistory from './pages/MonitoringHistory'; 
 
 function ProtectedRoute({ children }) {
   const [session, setSession] = useState(undefined);
@@ -91,6 +92,7 @@ function Layout() {
         <Route path="/history/:id" element={<ProtectedRoute><HistoryDetail /></ProtectedRoute>} />
         <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
         <Route path="/notifications" element={<ProtectedRoute><NotificationPage /></ProtectedRoute>} />
+        <Route path="/monitoring/history" element={<ProtectedRoute><MonitoringHistory /></ProtectedRoute>} />
 
       </Routes>
       

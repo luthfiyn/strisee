@@ -1,19 +1,55 @@
-import React from 'react';
-import { Droplet, FlaskConical, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Droplet, FlaskConical, AlertCircle, CheckCircle2, ChevronRight, Clock, AlertTriangle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useSensor } from '../context/SensorContext'; 
+import { supabase } from '../supabaseClient';
 import gambarMonitoring from '../assets/img_monitoring.jpg';
 
-
 export default function Monitoring() {
+  const navigate = useNavigate();
   const { sensor, alerts, markAsRead } = useSensor();
+  const [historyLogs, setHistoryLogs] = useState([]);
+
+  // Fetch data riwayat dari Supabase
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const { data, error } = await supabase
+        .from('sensor_logs') 
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(4);
+      
+      if (data && !error) {
+        setHistoryLogs(data);
+      }
+    };
+    
+    fetchHistory();
+
+    // Opsional: Realtime Subscription jika ingin tabelnya bergerak otomatis???
+    const subscription = supabase
+      .channel('public:sensor_logs')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_logs' }, (payload) => {
+        setHistoryLogs((current) => [payload.new, ...current].slice(0, 4));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(subscription); };
+  }, []);
 
   const isPhOptimal = sensor.ph_value >= 5.5 && sensor.ph_value <= 6.5;
   const isMoistureOptimal = sensor.moisture_value >= 60 && sensor.moisture_value <= 80;
   const requireAttention = alerts.length > 0 || !isPhOptimal || !isMoistureOptimal;
 
+  const formatTime = (isoString) => {
+    if (!isoString) return "--:--";
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  };
+
   return (
     <main className="pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full pb-32">
-      <section className="mb-8 relative rounded-3xl overflow-hidden bg-slate-200 min-h-[200px] flex items-end p-6" style={{backgroundImage: "linear-gradient(to top, rgba(248,249,251,1) 0%, rgba(248,249,251,0.2) 100%), url('" + gambarMonitoring + "')", backgroundSize: 'cover', backgroundPosition: 'center'}}>
+      <section className="mb-8 relative rounded-3xl overflow-hidden bg-slate-200 min-h-[200px] flex items-end p-6" style={{backgroundImage: `linear-gradient(to top, rgba(248,249,251,1) 0%, rgba(248,249,251,0.2) 100%), url('${gambarMonitoring}')`, backgroundSize: 'cover', backgroundPosition: 'center'}}>
         <div className="relative z-10">
           <p className="text-xs uppercase tracking-widest text-slate-500 mb-1 font-bold">Sektor Alpha</p>
           <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">Pemantau Lingkungan</h2>
@@ -27,7 +63,6 @@ export default function Monitoring() {
       </section>
 
       <section className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 mb-10">
-        
         <div className="md:col-span-7 bg-white rounded-3xl p-6 md:p-8 flex flex-col justify-between min-h-[220px] shadow-sm border border-slate-100 transition-colors">
           <div className="flex justify-between items-start mb-4 relative z-10">
             <div>
@@ -95,10 +130,10 @@ export default function Monitoring() {
           </div>
         </div>
       </section>
+
       <section className="mb-12">
         <h3 className="text-2xl font-bold text-slate-900 mb-6 tracking-tight">Notifikasi & Rekomendasi</h3>
         <div className="flex flex-col gap-4">
-          
           {alerts.length > 0 ? alerts.map(alert => (
              <div key={alert.id} className="bg-gradient-to-br from-red-700 to-red-600 rounded-3xl p-6 shadow-lg flex items-start gap-5 relative overflow-hidden">
                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
@@ -124,9 +159,83 @@ export default function Monitoring() {
               </div>
             </div>
           )}
-
         </div>
       </section>
+
+      <section className="mb-8">
+        <div className="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-slate-100 relative overflow-hidden">
+          
+          {/* Header Tabel */}
+          <div className="grid grid-cols-4 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 pb-2 border-b border-slate-50">
+            <div className="col-span-1">WAKTU</div>
+            <div className="col-span-1 text-center">PH TANAH</div>
+            <div className="col-span-1 text-center">KELEMBABAN</div>
+            <div className="col-span-1 text-right">STATUS</div>
+          </div>
+
+          <div className="flex flex-col">
+            {historyLogs.map((log, idx) => {
+              const phOk = log.ph_value >= 5.5 && log.ph_value <= 6.5;
+              const mstOk = log.moisture_value >= 60 && log.moisture_value <= 80;
+              const isOk = phOk && mstOk;
+
+              return (
+                <div key={log.id || idx} className="grid grid-cols-4 items-center py-4 border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
+                  
+                  <div className="col-span-1 flex items-center gap-2">
+                    <Clock size={16} className="text-amber-800/60" />
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-bold text-slate-900 text-sm">{formatTime(log.created_at)}</span>
+                      <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">WIB</span>
+                    </div>
+                  </div>
+
+                  <div className="col-span-1 text-center flex flex-col items-center">
+                    <span className={`font-bold text-sm ${phOk ? 'text-teal-700' : 'text-amber-700'}`}>
+                      {log.ph_value?.toFixed(1)}
+                    </span>
+                    {!phOk && (
+                      <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded mt-0.5">
+                        {log.ph_value < 5.5 ? 'Rendah' : 'Tinggi'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="col-span-1 text-center">
+                    <span className="font-bold text-sm text-slate-900">{log.moisture_value?.toFixed(0)}%</span>
+                  </div>
+
+                  <div className="col-span-1 flex justify-end">
+                    {isOk ? (
+                      <span className="inline-flex items-center gap-1 bg-teal-50 border border-teal-100 text-teal-700 px-3 py-1.5 rounded-full text-[11px] font-bold">
+                        <CheckCircle2 size={12} /> Optimal
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-[11px] font-bold">
+                        <AlertTriangle size={12} /> Perhatian
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {historyLogs.length === 0 && (
+              <div className="text-center py-8 text-slate-400 font-medium text-sm">
+                Belum ada data sensor tercatat hari ini.
+              </div>
+            )}
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+            <span className="text-sm text-slate-500 font-medium">Menampilkan {historyLogs.length} pembacaan terbaru</span>
+            <button onClick={() => navigate('/monitoring/history')} className="text-red-700 font-bold text-sm flex items-center gap-1 hover:text-red-800 group transition-colors">
+              Lihat Selengkapnya <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+        </div>
+      </section>
+
     </main>
   );
 }

@@ -77,7 +77,13 @@ export default function HistoryDetail() {
   if (!detail) return <div className="min-h-screen bg-slate-50 flex items-center justify-center font-bold text-red-500">Data tidak ditemukan.</div>;
 
   const result = detail.disease_catalogs;
-  const displayImage = DISEASE_IMAGES && DISEASE_IMAGES[result?.id] ? DISEASE_IMAGES[result?.id] : 'https://cs-assets.bayer.com/is/image/bayer/TP-2024012705';
+  
+  const displayImage = detail.image_data || (DISEASE_IMAGES && DISEASE_IMAGES[result?.id] ? DISEASE_IMAGES[result?.id] : 'https://cs-assets.bayer.com/is/image/bayer/TP-2024012705');
+  const isOriginalPhoto = Boolean(detail.image_data);
+
+  const multipleDetections = detail.detection_details || [];
+  const uniqueDiseaseNames = [...new Set(multipleDetections.map(det => det.diseaseName))];
+  const diseaseListString = uniqueDiseaseNames.join(', ');
 
   return (
     <div className="pb-32 bg-slate-50 min-h-screen">
@@ -87,16 +93,21 @@ export default function HistoryDetail() {
         </button>
       </header>
       
-      <section className="relative w-full h-[442px] md:h-[530px] bg-slate-200 rounded-br-[4rem] md:rounded-br-[6rem] overflow-hidden">
-        <img alt="Penyakit Tanaman" className={`w-full h-full object-cover object-center transition-all ${isHandled ? 'grayscale opacity-75' : ''}`} src={displayImage} onError={(e) => { e.target.src = 'https://cs-assets.bayer.com/is/image/bayer/TP-2024012705'; }} />
+      <section className={`relative w-full h-[442px] md:h-[530px] ${isOriginalPhoto ? 'bg-slate-900' : 'bg-slate-200'} rounded-br-[4rem] md:rounded-br-[6rem] overflow-hidden`}>
+        <img 
+          alt="Penyakit Tanaman" 
+          className={`w-full h-full ${isOriginalPhoto ? 'object-contain md:object-cover' : 'object-cover'} object-center transition-all ${isHandled ? 'grayscale opacity-75' : ''}`} 
+          src={displayImage} 
+          onError={(e) => { e.target.src = 'https://cs-assets.bayer.com/is/image/bayer/TP-2024012705'; }} 
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/60"></div>
       </section>
       
       <main className="relative z-10 -mt-20 md:-mt-32 px-6 md:px-12 max-w-4xl mx-auto">
         
-        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl mb-12 border border-slate-100 flex items-start justify-between gap-4">
-          
+        <div className="bg-white rounded-3xl p-6 md:p-8 shadow-xl mb-6 border border-slate-100 flex items-start justify-between gap-4">
           <div className="flex flex-col items-start flex-1 pr-2">
+            <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest mb-1 block">Diagnosis Utama</span>
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900 leading-tight mb-4">
               {result?.name || "Penyakit"}
             </h1>
@@ -111,19 +122,29 @@ export default function HistoryDetail() {
             <span className="text-[10px] md:text-xs uppercase tracking-widest font-bold mb-1 opacity-80 text-center">Akurasi<br/>AI</span>
             <span className="text-2xl md:text-3xl font-bold leading-none">{(detail.confidence * 100).toFixed(0)}%</span>
           </div>
-
         </div>
+
+        {multipleDetections.length > 1 && (
+          <div className="mb-6 bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-center gap-3">
+             <div className="w-8 h-8 rounded-full bg-amber-200/50 flex items-center justify-center text-amber-800 shrink-0">
+               <span className="font-bold">{multipleDetections.length}</span>
+             </div>
+             <p className="text-xs md:text-sm text-amber-900 font-medium leading-relaxed">
+               Strise mendeteksi <b>{multipleDetections.length} titik anomali</b> ({diseaseListString}) pada gambar ini. Lihat kotak berwarna pada foto untuk detail spesifiknya.
+             </p>
+          </div>
+        )}
 
         <section className="mb-14">
           <h2 className="text-2xl font-bold text-slate-900 mb-6">Indikasi Gejala</h2>
-          <div className="flex items-start gap-4 p-5 bg-slate-50 rounded-2xl">
+          <div className="flex items-start gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 text-red-600 mt-1"><Circle size={20} /></div>
             <p className="text-slate-600 leading-relaxed whitespace-pre-line">{result?.symptoms}</p>
           </div>
         </section>
 
         <section className="mb-12">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Rekomendasi Penanganan</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Rekomendasi Penanganan Utama</h2>
           <div className="flex items-start gap-4 p-5 bg-white rounded-2xl shadow-sm border border-slate-100">
             <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center shrink-0 text-teal-700 mt-1">
               <Icon iconNode={strawberry} className="w-5 h-5" />
