@@ -1,140 +1,143 @@
 import React, { useState } from 'react';
-import { Phone, KeyRound, Lock, ArrowLeft } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { ArrowLeft, Mail, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 
-export default function ForgotPasswordPage() {
-  const navigate = useNavigate();
-  // State: 'request' (Minta OTP) -> 'reset' (Masukkan OTP & Sandi Baru)
-  const [step, setStep] = useState('request'); 
-  
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
+export default function ForgotPassword() {
+  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-
-  const handlePhoneChange = (e) => {
-    let val = e.target.value.replace(/\D/g, ''); 
-    if (val.length > 0 && val[0] !== '0') val = '0' + val;
-    if (val.length > 1 && val[1] !== '8') val = '08' + val.substring(2);
-    setPhone(val);
-  };
-
-  const formatPhoneForSupabase = () => '+62' + phone.substring(1);
-
-  const handleRequestOtp = async (e) => {
-    e.preventDefault();
-    if (phone.length < 10) return setMessage("Nomor telepon tidak valid.");
-    
-    setLoading(true);
-    setMessage('');
-    
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: formatPhoneForSupabase(),
-    });
-    
-    setLoading(false);
-    
-    if (error) {
-      setMessage("Gagal mengirim OTP: " + error.message);
-    } else {
-      setMessage("Kode OTP telah dikirim melalui SMS/WhatsApp.");
-      setStep('reset');
-    }
-  };
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 6) return setMessage("Kata sandi baru minimal 6 karakter.");
-    
+    if (!email) {
+      setErrorMsg('Mohon masukkan alamat email Anda.');
+      return;
+    }
+
     setLoading(true);
+    setErrorMsg('');
     setMessage('');
-    
+
     try {
-      // 1. Verifikasi OTP dari SMS
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: formatPhoneForSupabase(),
-        token: otp,
-        type: 'sms'
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
       });
-      if (verifyError) throw verifyError;
 
-      // 2. Jika OTP benar, ubah kata sandi
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-      if (updateError) throw updateError;
+      if (error) {
+        throw error;
+      }
 
-      alert("Kata sandi berhasil diubah! Silakan masuk kembali.");
-      navigate('/login');
-    } catch (err) {
-      setMessage("Gagal mereset sandi: " + err.message);
+      setIsSuccess(true);
+      setMessage('Tautan pemulihan kata sandi telah dikirim ke email Anda. Silakan cek kotak masuk atau folder spam.');
+    } catch (error) {
+      console.error('Error saat mereset password:', error);
+      setErrorMsg(error.message || 'Terjadi kesalahan saat memproses permintaan.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="flex-grow flex items-center justify-center p-6 h-screen relative bg-slate-50">
-      <button onClick={() => navigate('/login')} className="absolute top-8 left-8 flex items-center space-x-2 text-slate-500 hover:text-red-700 transition-colors group z-10">
-        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-        <span className="text-sm uppercase tracking-widest font-semibold">Kembali ke Login</span>
-      </button>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 px-6 lg:px-8 relative overflow-hidden">
+      
+      <div className="absolute top-6 left-6 z-10">
+        <Link 
+          to="/login" 
+          className="w-12 h-12 flex items-center justify-center bg-white rounded-full shadow-md text-slate-700 hover:text-red-600 hover:shadow-lg transition-all active:scale-95 border border-slate-100"
+        >
+          <ArrowLeft size={24} />
+        </Link>
+      </div>
 
-      <div className="w-full max-w-md bg-white rounded-[2rem] shadow-xl p-8 md:p-12 border border-slate-100">
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Pemulihan Akun</h1>
-          <p className="text-slate-500 text-sm">
-            {step === 'request' ? 'Masukkan nomor telepon terdaftar Anda.' : 'Masukkan kode OTP dan sandi baru Anda.'}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 text-red-600 mb-4 shadow-sm border border-red-100">
+            <Mail size={32} />
+          </div>
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
+            Lupa Kata Sandi?
+          </h2>
+          <p className="mt-3 text-sm text-slate-600 max-w-sm mx-auto leading-relaxed">
+            Masukkan alamat email yang terdaftar, kami akan mengirimkan tautan untuk mengatur ulang kata sandi Anda.
           </p>
         </div>
 
-        {message && (
-          <div className={`p-4 rounded-xl mb-6 text-sm font-semibold border ${message.includes('Gagal') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-teal-50 text-teal-700 border-teal-100'}`}>
-            {message}
-          </div>
-        )}
+        <div className="bg-white py-8 px-6 md:px-10 shadow-xl shadow-slate-200/50 rounded-3xl border border-slate-100">
+          
+          {isSuccess ? (
+            <div className="text-center py-4 animate-in fade-in slide-in-from-bottom-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-50 text-teal-600 mb-4">
+                <CheckCircle2 size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Email Terkirim!</h3>
+              <p className="text-sm text-slate-600 leading-relaxed mb-6">
+                {message}
+              </p>
+              <Link 
+                to="/login"
+                className="inline-flex justify-center w-full px-6 py-3.5 border border-slate-200 rounded-xl shadow-sm text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+              >
+                Kembali ke Halaman Login
+              </Link>
+            </div>
+          ) : (
+            
+            <form className="space-y-6" onSubmit={handleResetPassword}>
+              {errorMsg && (
+                <div className="p-4 bg-red-50/80 border border-red-100 rounded-xl text-red-600 text-sm font-medium flex items-start gap-3">
+                  <span className="shrink-0 mt-0.5">⚠️</span>
+                  <span>{errorMsg}</span>
+                </div>
+              )}
 
-        {step === 'request' ? (
-          <form className="space-y-6" onSubmit={handleRequestOtp}>
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Nomor Telepon (08...)</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Phone size={18} className="text-slate-400" /></div>
-                <input type="tel" value={phone} onChange={handlePhoneChange} placeholder="08xxxxxxxxxx" required className="block w-full pl-10 pr-3 py-3 bg-slate-100 border-0 rounded-md text-slate-900 focus:ring-2 focus:ring-red-700" />
+              <div>
+                <label htmlFor="email" className="block text-sm font-bold text-slate-700 mb-2">
+                  Alamat Email
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="appearance-none block w-full pl-12 pr-4 py-3.5 border border-slate-200 rounded-xl placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 sm:text-sm bg-slate-50 focus:bg-white transition-colors"
+                    placeholder="strise@gmail.com"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="pt-4">
-              <button type="submit" disabled={loading} className="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-700 to-red-600 hover:scale-[1.02] transition-all disabled:opacity-50">
-                {loading ? 'Memproses...' : 'Kirim Kode OTP'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <form className="space-y-6" onSubmit={handleResetPassword}>
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Kode OTP dari SMS</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><KeyRound size={18} className="text-slate-400" /></div>
-                <input type="text" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} maxLength={6} placeholder="Masukkan 6 angka OTP" required className="block w-full pl-10 pr-3 py-3 bg-slate-100 border-0 rounded-md text-slate-900 focus:ring-2 focus:ring-red-700 tracking-[0.2em] font-bold" />
+
+              <div>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 size={18} className="animate-spin" />
+                      Mengirim...
+                    </span>
+                  ) : (
+                    'Kirim Tautan'
+                  )}
+                </button>
               </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Buat Kata Sandi Baru</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Lock size={18} className="text-slate-400" /></div>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Minimal 6 karakter" required className="block w-full pl-10 pr-3 py-3 bg-slate-100 border-0 rounded-md text-slate-900 focus:ring-2 focus:ring-red-700" />
-              </div>
-            </div>
-            <div className="pt-4">
-              <button type="submit" disabled={loading} className="w-full py-4 rounded-xl font-bold text-white bg-gradient-to-r from-red-700 to-red-600 hover:scale-[1.02] transition-all disabled:opacity-50">
-                {loading ? 'Menyimpan...' : 'Simpan Sandi Baru'}
-              </button>
-            </div>
-          </form>
-        )}
+            </form>
+          )}
+        </div>
       </div>
-    </main>
+      
+      <div className="absolute top-0 right-0 -mr-20 -mt-20 w-64 h-64 rounded-full bg-red-50/50 blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-blue-50/50 blur-3xl pointer-events-none"></div>
+    </div>
   );
 }
