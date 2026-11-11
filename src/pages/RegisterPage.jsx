@@ -22,7 +22,7 @@ export default function RegisterPage() {
       options: { 
         data: { 
           full_name: fullName,
-          phone_number: phoneNumber // Mengirim nomor telepon ke metadata
+          phone_number: phoneNumber 
         } 
       }
     });
@@ -31,7 +31,7 @@ export default function RegisterPage() {
     if (error) {
       alert("Registrasi Gagal: " + error.message);
     } else {
-      navigate('/dashboard'); // Langsung masuk ke dasbor karena "Confirm Email" sudah dimatikan
+      navigate('/dashboard'); 
     }
   };
 
