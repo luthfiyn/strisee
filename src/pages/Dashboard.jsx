@@ -74,7 +74,7 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-between items-center mt-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                 <span>4.0</span>
-                <span>5.5 (Target)</span>
+                <span>5.5</span>
                 <span>8.0</span>
               </div>
             </div>
