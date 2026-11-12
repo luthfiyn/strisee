@@ -275,7 +275,7 @@ export default function Monitoring() {
         <section className="mb-12 flex justify-start animate-in fade-in duration-500">
           <div className="bg-teal-50 border border-teal-100 rounded-2xl px-6 py-4 flex items-center gap-4 max-w-2xl shadow-sm">
             <CheckCircle2 className="text-teal-600 shrink-0" size={24} />
-            <span className="text-sm font-bold text-teal-800 leading-relaxed">Kondisi lahan saat ini terpantau optimal. Tidak ada rekomendasi penanganan agronomi yang mendesak untuk dilakukan.</span>
+            <span className="text-sm font-bold text-teal-800 leading-relaxed">Kondisi lahan saat ini terpantau optimal. Tidak ada rekomendasi penanganan yang mendesak untuk dilakukan.</span>
           </div>
         </section>
       )}
