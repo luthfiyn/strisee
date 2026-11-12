@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { supabase } from './supabaseClient';
-import TopHeader from './components/TopHeader';
+import TopHeader from './components/SideBar';
 import BottomNav from './components/BottomNav';
 
 import { SensorProvider } from './context/SensorContext'; 
@@ -10,7 +10,7 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage'; 
-import ResetPasswordConfirm from './pages/ResetPasswordConfirm'; // Halaman Reset
+import ResetPasswordConfirm from './pages/ResetPasswordConfirm'; 
 import Dashboard from './pages/Dashboard';
 import Monitoring from './pages/Monitoring';
 import DiagnosticResult from './pages/DiagnosticResult';
