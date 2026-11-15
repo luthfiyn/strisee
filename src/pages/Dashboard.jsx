@@ -10,18 +10,46 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [userName, setUserName] = useState("Petani");
   const { sensor } = useSensor();
+  
+  const [latestLog, setLatestLog] = useState(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) setUserName(user.user_metadata?.full_name?.split(' ')[0] || "Petani");
     });
+
+    const fetchLatestLog = async () => {
+      const { data, error } = await supabase
+        .from('sensor_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(1);
+
+      if (data && data.length > 0 && !error) {
+        setLatestLog(data[0]);
+      }
+    };
+
+    fetchLatestLog();
+
+    const subscription = supabase
+      .channel('public:sensor_logs_dashboard')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'sensor_logs' }, (payload) => {
+        setLatestLog(payload.new);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(subscription); };
   }, []);
 
+  const currentPh = latestLog ? latestLog.ph_value : sensor.ph_value;
+  const currentMoisture = latestLog ? latestLog.moisture_value : sensor.moisture_value;
+
   const isOptimal = 
-    sensor.ph_value >= 5.5 && 
-    sensor.ph_value <= 6.5 && 
-    sensor.moisture_value >= 60 && 
-    sensor.moisture_value <= 80;
+    currentPh >= 5.5 && 
+    currentPh <= 6.5 && 
+    currentMoisture >= 60 && 
+    currentMoisture <= 80;
 
   return (
     <main className="pt-24 px-6 max-w-7xl mx-auto flex flex-col gap-8 md:px-12 w-full pb-32">
@@ -54,22 +82,22 @@ export default function Dashboard() {
               <p className="text-xs uppercase tracking-widest text-slate-400 font-bold">Data Real-time</p>
               <h4 className="font-bold text-lg text-slate-900 mt-1">pH Tanah</h4>
             </div>
-            <div className={`px-3 py-1 rounded-full border transition-colors ${sensor.ph_value >= 5.5 && sensor.ph_value <= 6.5 ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
-              <span className="text-xs font-bold">{sensor.ph_value >= 5.5 && sensor.ph_value <= 6.5 ? 'Normal' : 'Kritis'}</span>
+            <div className={`px-3 py-1 rounded-full border transition-colors ${currentPh >= 5.5 && currentPh <= 6.5 ? 'bg-teal-50 border-teal-100 text-teal-700' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+              <span className="text-xs font-bold">{currentPh >= 5.5 && currentPh <= 6.5 ? 'Normal' : 'Kritis'}</span>
             </div>
           </div>
           
           <div className="relative z-10 mt-6 w-full flex flex-col">
             <div className="flex items-baseline gap-2 transition-all duration-500 mb-3">
-              <span className="font-extrabold text-5xl text-slate-900 tracking-tighter">{sensor.ph_value.toFixed(1)}</span>
+              <span className="font-extrabold text-5xl text-slate-900 tracking-tighter">{currentPh.toFixed(1)}</span>
               <span className="text-slate-400">pH</span>
             </div>
           
             <div className="w-full">
               <div className="h-1.5 w-full bg-slate-100 rounded-full relative">
                 <div 
-                  className="absolute top-0 left-0 h-1.5 bg-amber-600 rounded-full transition-all duration-500" 
-                  style={{ width: `${Math.max(0, Math.min(100, ((sensor.ph_value - 4) / 4) * 100))}%` }}
+                  className={`absolute top-0 left-0 h-1.5 rounded-full transition-all duration-500 ${currentPh >= 5.5 && currentPh <= 6.5 ? 'bg-teal-600' : 'bg-amber-600'}`} 
+                  style={{ width: `${Math.max(0, Math.min(100, ((currentPh - 4) / 4) * 100))}%` }}
                 ></div>
               </div>
               <div className="flex justify-between items-center mt-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
@@ -91,11 +119,11 @@ export default function Dashboard() {
           
           <div className="mt-6 flex items-end justify-between w-full">
             <div className="flex flex-col">
-              <span className={`text-[10px] uppercase font-bold mb-1 transition-colors ${sensor.moisture_value >= 60 && sensor.moisture_value <= 80 ? 'text-teal-700' : 'text-red-700'}`}>
-                {sensor.moisture_value >= 60 && sensor.moisture_value <= 80 ? 'Normal' : 'Kritis'}
+              <span className={`text-[10px] uppercase font-bold mb-1 transition-colors ${currentMoisture >= 60 && currentMoisture <= 80 ? 'text-teal-700' : 'text-red-700'}`}>
+                {currentMoisture >= 60 && currentMoisture <= 80 ? 'Normal' : 'Kritis'}
               </span>
               <div className="flex items-baseline gap-1 transition-all duration-500">
-                <span className="font-extrabold text-4xl text-slate-900 tracking-tighter">{sensor.moisture_value.toFixed(0)}</span>
+                <span className="font-extrabold text-4xl text-slate-900 tracking-tighter">{currentMoisture.toFixed(0)}</span>
                 <span className="font-bold text-xl text-slate-400">%</span>
               </div>
             </div>
@@ -104,7 +132,7 @@ export default function Dashboard() {
               <div className="w-3.5 h-3 bg-slate-300 rounded-[2px]"></div>
               <div className="w-3.5 h-5 bg-slate-300 rounded-[2px]"></div>
               <div className="w-3.5 h-7 bg-slate-300 rounded-[2px]"></div>
-              <div className="w-4 h-10 bg-teal-600 rounded-[2px] shadow-sm"></div>
+              <div className={`w-4 h-10 rounded-[2px] shadow-sm ${currentMoisture >= 60 && currentMoisture <= 80 ? 'bg-teal-600' : 'bg-amber-600'}`}></div>
               <div className="w-3.5 h-8 bg-slate-300 rounded-[2px]"></div>
             </div>
           </div>

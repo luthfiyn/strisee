@@ -11,13 +11,12 @@ export default function Monitoring() {
   const [historyLogs, setHistoryLogs] = useState([]);
   const [showFullGuide, setShowFullGuide] = useState(false);
 
-  // Fetch data riwayat dari Supabase
   useEffect(() => {
     const fetchHistory = async () => {
       const { data, error } = await supabase
         .from('sensor_logs') 
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('timestamp', { ascending: false })
         .limit(4);
       
       if (data && !error) {
@@ -37,15 +36,22 @@ export default function Monitoring() {
     return () => { supabase.removeChannel(subscription); };
   }, []);
 
-  const isPhOptimal = sensor.ph_value >= 5.5 && sensor.ph_value <= 6.5;
-  const isMoistureOptimal = sensor.moisture_value >= 60 && sensor.moisture_value <= 80;
+  const currentPh = historyLogs.length > 0 ? historyLogs[0].ph_value : sensor.ph_value;
+  const currentMoisture = historyLogs.length > 0 ? historyLogs[0].moisture_value : sensor.moisture_value;
+
+  const isPhOptimal = currentPh >= 5.5 && currentPh <= 6.5;
+  const isMoistureOptimal = currentMoisture >= 60 && currentMoisture <= 80;
   
   const requireAttention = !isPhOptimal || !isMoistureOptimal;
 
   const formatTime = (isoString) => {
     if (!isoString) return "--:--";
     const date = new Date(isoString);
-    return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('id-ID', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZone: 'UTC' 
+    });
   };
 
   const getPhRecommendation = (ph) => {
@@ -78,8 +84,8 @@ export default function Monitoring() {
     return null;
   };
 
-  const currentPhRec = getPhRecommendation(sensor.ph_value);
-  const isMoistureHigh = sensor.moisture_value > 80;
+  const currentPhRec = getPhRecommendation(currentPh);
+  const isMoistureHigh = currentMoisture > 80;
 
   return (
     <main className="pt-24 px-4 md:px-8 max-w-7xl mx-auto w-full pb-32">
@@ -114,7 +120,7 @@ export default function Monitoring() {
           <div className="relative z-10 flex items-end justify-between w-full">
             <div className="flex items-baseline transition-all duration-500">
               <span className={`text-6xl md:text-7xl font-extrabold tracking-tighter ${isMoistureOptimal ? "text-slate-900" : "text-amber-600"}`}>
-                {sensor.moisture_value.toFixed(0)}
+                {currentMoisture.toFixed(0)}
               </span>
               <span className="text-2xl font-bold text-slate-400 ml-1">%</span>
             </div>
@@ -145,7 +151,7 @@ export default function Monitoring() {
           <div className="relative z-10 transition-all duration-500 flex flex-col w-full mt-2">
             <div className="flex items-baseline mb-3">
               <span className={`text-6xl md:text-7xl font-extrabold tracking-tighter ${isPhOptimal ? "text-slate-900" : "text-amber-600"}`}>
-                {sensor.ph_value.toFixed(1)}
+                {currentPh.toFixed(1)}
               </span>
             </div>
             
@@ -153,7 +159,7 @@ export default function Monitoring() {
               <div className="h-2 w-full bg-slate-200/80 rounded-full relative">
                 <div 
                   className={`absolute top-0 left-0 h-2 rounded-full transition-all duration-500 ${isPhOptimal ? 'bg-teal-600' : 'bg-amber-500'}`}
-                  style={{ width: `${Math.max(0, Math.min(100, ((sensor.ph_value - 4) / 4) * 100))}%` }}
+                  style={{ width: `${Math.max(0, Math.min(100, ((currentPh - 4) / 4) * 100))}%` }}
                 ></div>
               </div>
               <div className="flex justify-between items-center mt-2 text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -302,7 +308,7 @@ export default function Monitoring() {
                   <div className="col-span-1 flex items-center gap-2">
                     <Clock size={16} className="text-amber-800/60" />
                     <div className="flex items-baseline gap-1">
-                      <span className="font-bold text-slate-900 text-sm">{formatTime(log.created_at)}</span>
+                      <span className="font-bold text-slate-900 text-sm">{formatTime(log.timestamp)}</span>
                       <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">WIB</span>
                     </div>
                   </div>

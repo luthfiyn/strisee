@@ -3,9 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navig
 import { supabase } from './supabaseClient';
 import TopHeader from './components/SideBar';
 import BottomNav from './components/BottomNav';
-
 import { SensorProvider } from './context/SensorContext'; 
-
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
