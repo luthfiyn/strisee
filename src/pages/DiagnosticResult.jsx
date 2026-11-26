@@ -24,7 +24,7 @@ export const DISEASE_IMAGES = {
   default: 'https://cs-assets.bayer.com/is/image/bayer/TP-2024012705'
 };
 
-// Konfigurasi berkas model di folder /public
+// Pastikan berkas FP16 sudah ditempatkan di /public/yolov12-strise-fp16.tflite
 const MODEL_PATHS = {
   fp32: '/yolov12-strise.tflite',
   fp16: '/yolov12-strise-fp16.tflite'
@@ -48,11 +48,25 @@ function calculateIoU(box1, box2) {
 
 const round2 = (v) => (typeof v === 'number' && !Number.isNaN(v) ? Number(v.toFixed(2)) : '');
 
+function detectDeviceType() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
+}
+
+function classifyDeliverySource(entry) {
+  if (!entry) return 'not_recorded';
+  const viaSW = typeof entry.workerStart === 'number' && entry.workerStart > 0;
+  if (viaSW && entry.transferSize === 0) return 'service_worker_cache';
+  if (viaSW && entry.transferSize > 0) return 'service_worker_network';
+  if (entry.transferSize === 0 && entry.decodedBodySize > 0) return 'http_cache';
+  if (entry.transferSize > 0) return 'network';
+  return 'cross_origin_or_cache';
+}
+
 export default function DiagnosticResult() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Parameter URL: ?precision=fp32|fp16&bench=1
+  // Parameter URL benchmark: ?precision=fp32|fp16&bench=1
   const precision = searchParams.get('precision') === 'fp16' ? 'fp16' : 'fp32';
   const isBenchMode = searchParams.get('bench') === '1';
   const modelPath = MODEL_PATHS[precision];
@@ -61,6 +75,7 @@ export default function DiagnosticResult() {
   const fileInputRef = useRef(null);
   const lastImageRef = useRef(null);
   const lastImageNameRef = useRef('camera_frame');
+  const inferRunCounterRef = useRef(0);
 
   const [model, setModel] = useState(globalModelCache[precision]);
   const [result, setResult] = useState(null);
@@ -75,13 +90,18 @@ export default function DiagnosticResult() {
   const [benchLogs, setBenchLogs] = useState([]);
   const [lastLoadMetric, setLastLoadMetric] = useState(null);
   const [skipDbWrite, setSkipDbWrite] = useState(true);
+  const [isBatchRunning, setIsBatchRunning] = useState(false);
   const [batchProgress, setBatchProgress] = useState('');
 
-  // 1) Inisialisasi kamera sekali saja saat mount
+  // 1) Kamera hanya aktif pada mode normal saat berada di tampilan pemindai
   useEffect(() => {
+    if (isBenchMode || result) return;
+
+    let activeStream = null;
     const startCamera = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        activeStream = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
@@ -93,30 +113,43 @@ export default function DiagnosticResult() {
     startCamera();
 
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
+      if (activeStream) {
+        activeStream.getTracks().forEach((t) => t.stop());
+      } else if (videoRef.current && videoRef.current.srcObject) {
         videoRef.current.srcObject.getTracks().forEach((t) => t.stop());
       }
     };
-  }, []);
+  }, [isBenchMode, result]);
 
-  // 2) Inisialisasi model TFLite (mengukur Cold Start vs Warm Reuse)
+  // 2) Inisialisasi model TFLite (Cold Start vs Warm Cache vs In-Memory Reuse)
   useEffect(() => {
     let cancelled = false;
 
     const initAI = async () => {
+      const deviceType = detectDeviceType();
+      const cpuCores = navigator.hardwareConcurrency || '';
+      const deviceRamGb = navigator.deviceMemory || '';
+
       if (globalModelCache[precision]) {
         setModel(globalModelCache[precision]);
         const reuseMetric = {
           record_type: 'memory_reuse',
           run_id: 0,
           timestamp: new Date().toISOString(),
+          device_type: deviceType,
+          cpu_cores: cpuCores,
+          device_ram_gb: deviceRamGb,
           precision,
           model_file: modelPath,
-          fetch_ms: 0,
-          wasm_init_ms: 0,
-          total_load_ms: 0,
-          transfer_bytes: 0,
-          cache_status: 'in_memory'
+          delivery_source: 'in_memory',
+          model_fetch_ms: 0,
+          model_transfer_bytes: 0,
+          model_decoded_bytes: 0,
+          wasm_fetch_span_ms: 0,
+          wasm_transfer_bytes: 0,
+          wasm_resource_count: 0,
+          post_fetch_init_ms: 0,
+          total_load_ms: 0
         };
         setLastLoadMetric(reuseMetric);
         console.log('[STRISE_BENCH][LOAD]', reuseMetric);
@@ -130,40 +163,67 @@ export default function DiagnosticResult() {
       try {
         if (!window.tflite) throw new Error('Mesin TFLite belum selesai diunduh.');
 
+        // Snapshot jumlah Resource Timing sebelum pemanggilan loadTFLiteModel
+        const prevResCount = performance.getEntriesByType('resource').length;
         const tLoadStart = performance.now();
+
         window.tflite.setWasmPath('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-tflite/dist/');
         const loadedModel = await window.tflite.loadTFLiteModel(modelPath);
-        const tLoadEnd = performance.now();
 
+        const tLoadEnd = performance.now();
         const totalLoadMs = tLoadEnd - tLoadStart;
 
-        // Ambil timing jaringan/cache dari Resource Timing API
-        const resEntries = performance
-          .getEntriesByType('resource')
-          .filter((entry) => entry.name.includes(modelPath));
-        const modelRes = resEntries[resEntries.length - 1];
+        // Ambil hanya resource yang benar-benar dipicu oleh loadTFLiteModel() ini
+        const newEntries = performance.getEntriesByType('resource').slice(prevResCount);
 
-        const fetchMs = modelRes ? modelRes.duration : null;
-        const transferBytes = modelRes ? modelRes.transferSize : null;
-        const wasmInitMs = fetchMs !== null ? Math.max(0, totalLoadMs - fetchMs) : null;
-        const cacheStatus =
-          modelRes == null
-            ? 'unknown'
-            : modelRes.transferSize === 0
-              ? 'cache_or_sw'
-              : 'network';
+        const modelEntry = newEntries.find((e) => e.name.includes(modelPath));
+        const wasmEntries = newEntries.filter(
+          (e) =>
+            e.name.includes('cdn.jsdelivr.net') ||
+            e.name.includes('tfjs-tflite') ||
+            e.name.endsWith('.wasm')
+        );
+
+        const modelFetchMs = modelEntry ? modelEntry.duration : null;
+        const modelTransferBytes = modelEntry ? modelEntry.transferSize : null;
+        const modelDecodedBytes = modelEntry ? modelEntry.decodedBodySize : null;
+
+        // Rentang paralel (wall-clock span) untuk aset WASM agar tidak double-count
+        let wasmFetchSpanMs = 0;
+        let wasmTransferBytes = 0;
+        if (wasmEntries.length > 0) {
+          const minWasmStart = Math.min(...wasmEntries.map((e) => e.startTime));
+          const maxWasmEnd = Math.max(...wasmEntries.map((e) => e.responseEnd));
+          wasmFetchSpanMs = Math.max(0, maxWasmEnd - minWasmStart);
+          wasmTransferBytes = wasmEntries.reduce((sum, e) => sum + (e.transferSize || 0), 0);
+        }
+
+        // Waktu inisialisasi murni setelah seluruh unduhan resource selesai
+        const relevantEntries = [modelEntry, ...wasmEntries].filter(Boolean);
+        const maxResponseEnd =
+          relevantEntries.length > 0
+            ? Math.max(...relevantEntries.map((e) => e.responseEnd))
+            : tLoadStart;
+        const postFetchInitMs = Math.max(0, tLoadEnd - maxResponseEnd);
 
         const loadMetric = {
           record_type: 'model_load',
           run_id: 0,
           timestamp: new Date().toISOString(),
+          device_type: deviceType,
+          cpu_cores: cpuCores,
+          device_ram_gb: deviceRamGb,
           precision,
           model_file: modelPath,
-          fetch_ms: round2(fetchMs),
-          wasm_init_ms: round2(wasmInitMs),
-          total_load_ms: round2(totalLoadMs),
-          transfer_bytes: transferBytes ?? '',
-          cache_status: cacheStatus
+          delivery_source: classifyDeliverySource(modelEntry),
+          model_fetch_ms: round2(modelFetchMs),
+          model_transfer_bytes: modelTransferBytes ?? '',
+          model_decoded_bytes: modelDecodedBytes ?? '',
+          wasm_fetch_span_ms: round2(wasmFetchSpanMs),
+          wasm_transfer_bytes: wasmTransferBytes,
+          wasm_resource_count: wasmEntries.length,
+          post_fetch_init_ms: round2(postFetchInitMs),
+          total_load_ms: round2(totalLoadMs)
         };
 
         globalModelCache[precision] = loadedModel;
@@ -187,8 +247,8 @@ export default function DiagnosticResult() {
     };
   }, [precision, modelPath]);
 
-  // main logic & bounding box + stage-level latency decomposition
-  const processDetection = async (sourceElement, isVideo, runIndex = null) => {
+  // main logic & bounding box + dekomposisi latensi tervalidasi
+  const processDetection = async (sourceElement, isVideo, explicitRunId = null) => {
     if (!model) return null;
     setIsScanning(true);
     setErrorMsg('');
@@ -199,8 +259,9 @@ export default function DiagnosticResult() {
 
     try {
       const tf = window.tf;
+      const tfBackend = typeof tf?.getBackend === 'function' ? tf.getBackend() : 'unknown';
 
-      // Stage 1: Preprocessing
+      // Stage 1: Preprocessing Tensor
       const tPreStart = performance.now();
       const tensor = tf.browser
         .fromPixels(sourceElement)
@@ -209,12 +270,12 @@ export default function DiagnosticResult() {
         .div(255.0);
       const tPreEnd = performance.now();
 
-      // Stage 2: TFLite WASM Inference
+      // Stage 2: Inferensi TFLite WASM
       const tInfStart = performance.now();
       const prediction = await model.predict(tensor);
       const tInfEnd = performance.now();
 
-      // Stage 3: Tensor Readback & Dispose
+      // Stage 3: Readback Tensor ke Array JS & Pembersihan Memori
       const tReadStart = performance.now();
       const outputData = prediction.dataSync();
       const shape = prediction.shape;
@@ -222,7 +283,7 @@ export default function DiagnosticResult() {
       if (prediction) tf.dispose(prediction);
       const tReadEnd = performance.now();
 
-      // Stage 4: Anchor Decode + Confidence Filter (>0.30) + NMS (IoU<0.45)
+      // Stage 4: Dekode Anchor + Filter Confidence (>0.30) + NMS (IoU<0.45)
       const tPostStart = performance.now();
       let boxes = [];
       const numAnchors = shape[1] === 11 ? shape[2] : shape[1];
@@ -280,7 +341,7 @@ export default function DiagnosticResult() {
       if (maxCoord <= 1.5) isNormalized = true;
       const tPostEnd = performance.now();
 
-      // Stage 5: Canvas Setup & Base Image Draw
+      // Stage 5: Inisialisasi Canvas & Gambar Citra Dasar
       const tCanvasInitStart = performance.now();
       const canvas = document.createElement('canvas');
       const maxDim = 1080;
@@ -298,7 +359,7 @@ export default function DiagnosticResult() {
       ctx.drawImage(sourceElement, 0, 0, cWidth, cHeight);
       const tCanvasInitEnd = performance.now();
 
-      // Stage 6: Supabase Catalog Query (Critical Path)
+      // Stage 6: Kueri Katalog Penyakit Supabase (Critical Path)
       const tCatalogStart = performance.now();
       const uniqueClassIds = [...new Set(finalBoxes.map((b) => b.classId))];
       const { data: catalogs } = await supabase
@@ -309,7 +370,7 @@ export default function DiagnosticResult() {
       if (catalogs) catalogs.forEach((cat) => (catalogMap[cat.id] = cat));
       const tCatalogEnd = performance.now();
 
-      // Stage 7: Bounding Box Overlay + Base64 JPEG Encode
+      // Stage 7: Gambar Bounding Box & Kompresi Base64 JPEG
       const tDrawEncodeStart = performance.now();
       const uiColors = ['#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#14b8a6'];
 
@@ -365,6 +426,7 @@ export default function DiagnosticResult() {
       const capturedBase64 = canvas.toDataURL('image/jpeg', 0.85);
       const tDrawEncodeEnd = performance.now();
 
+      // Stage 8: React State Commit + Browser Paint (Double rAF)
       setCapturedImage(capturedBase64);
       setMultipleDetections(enrichedBoxes);
 
@@ -376,9 +438,13 @@ export default function DiagnosticResult() {
         disease_catalog_id: primaryDetection.classId,
         ...primaryCatalog
       });
-      const tResultReady = performance.now();
 
-      // Stage 8: Background DB Persistence (dapat dilewati saat mode ?bench=1 agar DB tidak penuh)
+      await new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve))
+      );
+      const tPainted = performance.now();
+
+      // Stage 9: Persistensi Database di Latar Belakang
       const tPersistStart = performance.now();
       const shouldWriteDb = !isBenchMode || !skipDbWrite;
       if (shouldWriteDb) {
@@ -420,13 +486,22 @@ export default function DiagnosticResult() {
       const isWarmup = !warmupDoneMap[precision];
       warmupDoneMap[precision] = true;
 
+      inferRunCounterRef.current += 1;
+      const runId = explicitRunId ?? inferRunCounterRef.current;
+
       const metric = {
         record_type: 'inference',
-        run_id: runIndex ?? benchLogs.filter((l) => l.record_type === 'inference').length + 1,
+        run_id: runId,
         timestamp: new Date().toISOString(),
+        device_type: detectDeviceType(),
+        cpu_cores: navigator.hardwareConcurrency || '',
+        device_ram_gb: navigator.deviceMemory || '',
         precision,
         model_file: modelPath,
+        tf_backend: tfBackend,
         image_name: isVideo ? 'camera_frame' : lastImageNameRef.current,
+        image_width: isVideo ? sourceElement.videoWidth : sourceElement.naturalWidth,
+        image_height: isVideo ? sourceElement.videoHeight : sourceElement.naturalHeight,
         is_warmup: isWarmup ? 1 : 0,
         ui_yield_ms: round2(tAfterYield - tStart),
         preprocess_ms: round2(tPreEnd - tPreStart),
@@ -436,8 +511,10 @@ export default function DiagnosticResult() {
         canvas_init_ms: round2(tCanvasInitEnd - tCanvasInitStart),
         catalog_fetch_ms: round2(tCatalogEnd - tCatalogStart),
         bbox_encode_ms: round2(tDrawEncodeEnd - tDrawEncodeStart),
-        time_to_result_ms: round2(tResultReady - tStart),
-        db_persist_ms: shouldWriteDb ? round2(tPersistEnd - tPersistStart) : 0,
+        ui_paint_ms: round2(tPainted - tDrawEncodeEnd),
+        time_to_visual_result_ms: round2(tPainted - tStart),
+        db_written: shouldWriteDb ? 1 : 0,
+        db_persist_ms: shouldWriteDb ? round2(tPersistEnd - tPersistStart) : '',
         total_e2e_ms: round2(tPersistEnd - tStart),
         num_boxes: finalBoxes.length,
         top_class: primaryDetection.diseaseName,
@@ -479,29 +556,54 @@ export default function DiagnosticResult() {
     };
   };
 
-  // Batch runner otomatis 30x untuk Steady-State Inference
+  // Batch runner terkontrol: memastikan 1 warm-up lalu 30 steady-state dengan jalur DOM identik
   const runBatch30 = async () => {
     if (!lastImageRef.current || !model) {
       alert('Unggah 1 gambar uji dari galeri terlebih dahulu sebelum menjalankan 30x benchmark.');
       return;
     }
-    for (let i = 1; i <= 30; i++) {
-      setBatchProgress(`Running ${i}/30 (${precision.toUpperCase()})...`);
-      await processDetection(lastImageRef.current, false, i);
-      // Jeda singkat antar-iterasi agar browser sempat GC & paint
-      await new Promise((r) => setTimeout(r, 150));
+    setIsBatchRunning(true);
+    try {
+      // Pastikan sudah ada 1 warm-up sebelum masuk 30 iterasi steady-state
+      if (!warmupDoneMap[precision]) {
+        setBatchProgress(`Warm-up (${precision.toUpperCase()})...`);
+        setResult(null);
+        setCapturedImage(null);
+        setMultipleDetections([]);
+        await new Promise((r) => setTimeout(r, 150));
+        await processDetection(lastImageRef.current, false, 0);
+      }
+
+      for (let i = 1; i <= 30; i++) {
+        setBatchProgress(`Steady-state ${i}/30 (${precision.toUpperCase()})...`);
+        // Reset state ke tampilan awal agar setiap iterasi menempuh siklus mount DOM yang sama
+        setResult(null);
+        setCapturedImage(null);
+        setMultipleDetections([]);
+        setOpenAccordionId(null);
+        await new Promise((r) => setTimeout(r, 150));
+
+        await processDetection(lastImageRef.current, false, i);
+        await new Promise((r) => setTimeout(r, 150));
+      }
+      setBatchProgress('Selesai 30/30 steady-state');
+    } finally {
+      setIsBatchRunning(false);
     }
-    setBatchProgress('Selesai 30/30');
   };
 
   const exportBenchCSV = () => {
     const headers = [
-      'record_type', 'run_id', 'timestamp', 'precision', 'model_file', 'cache_status',
-      'fetch_ms', 'wasm_init_ms', 'total_load_ms', 'transfer_bytes',
-      'image_name', 'is_warmup', 'ui_yield_ms', 'preprocess_ms', 'inference_ms',
-      'readback_ms', 'postprocess_ms', 'canvas_init_ms', 'catalog_fetch_ms',
-      'bbox_encode_ms', 'time_to_result_ms', 'db_persist_ms', 'total_e2e_ms',
-      'num_boxes', 'top_class', 'top_conf'
+      'record_type', 'run_id', 'timestamp', 'device_type', 'cpu_cores', 'device_ram_gb',
+      'precision', 'model_file', 'delivery_source',
+      'model_fetch_ms', 'model_transfer_bytes', 'model_decoded_bytes',
+      'wasm_fetch_span_ms', 'wasm_transfer_bytes', 'wasm_resource_count',
+      'post_fetch_init_ms', 'total_load_ms',
+      'tf_backend', 'image_name', 'image_width', 'image_height', 'is_warmup',
+      'ui_yield_ms', 'preprocess_ms', 'inference_ms', 'readback_ms',
+      'postprocess_ms', 'canvas_init_ms', 'catalog_fetch_ms', 'bbox_encode_ms',
+      'ui_paint_ms', 'time_to_visual_result_ms', 'db_written', 'db_persist_ms',
+      'total_e2e_ms', 'num_boxes', 'top_class', 'top_conf'
     ];
     const rows = benchLogs.map((row) =>
       headers.map((h) => JSON.stringify(row[h] ?? '')).join(',')
@@ -511,7 +613,7 @@ export default function DiagnosticResult() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `strise_bench_${precision}_${Date.now()}.csv`;
+    a.download = `strise_${detectDeviceType()}_${precision}_${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -526,23 +628,28 @@ export default function DiagnosticResult() {
     setOpenAccordionId(openAccordionId === id ? null : id);
   };
 
-  // Widget kecil khusus ?bench=1 (tidak tampil untuk pengguna biasa)
+  // Overlay khusus ?bench=1
   const renderBenchOverlay = () => {
     if (!isBenchMode) return null;
-    const inferCount = benchLogs.filter((l) => l.record_type === 'inference').length;
+    const steadyCount = benchLogs.filter(
+      (l) => l.record_type === 'inference' && l.is_warmup === 0
+    ).length;
+
     return (
-      <div className="fixed top-20 right-3 z-[999] bg-slate-900/95 text-white p-3 rounded-2xl shadow-2xl border border-slate-700 w-64 text-xs space-y-2">
+      <div className="fixed top-20 right-3 z-[999] bg-slate-900/95 text-white p-3 rounded-2xl shadow-2xl border border-slate-700 w-72 text-xs space-y-2">
         <div className="flex items-center justify-between font-bold">
-          <span>BENCH ({precision.toUpperCase()})</span>
+          <span>BENCH ({detectDeviceType().toUpperCase()} · {precision.toUpperCase()})</span>
           <div className="flex gap-1">
             <button
               onClick={() => switchPrecision('fp32')}
+              disabled={isBatchRunning}
               className={`px-2 py-0.5 rounded ${precision === 'fp32' ? 'bg-red-600' : 'bg-slate-700'}`}
             >
               FP32
             </button>
             <button
               onClick={() => switchPrecision('fp16')}
+              disabled={isBatchRunning}
               className={`px-2 py-0.5 rounded ${precision === 'fp16' ? 'bg-emerald-600' : 'bg-slate-700'}`}
             >
               FP16
@@ -550,16 +657,23 @@ export default function DiagnosticResult() {
           </div>
         </div>
         {lastLoadMetric && (
-          <div className="text-[11px] text-slate-300 leading-snug">
-            Load: <b>{lastLoadMetric.total_load_ms} ms</b> ({lastLoadMetric.cache_status})
-            <br />
-            Fetch: {lastLoadMetric.fetch_ms} ms | WASM: {lastLoadMetric.wasm_init_ms} ms
+          <div className="text-[11px] text-slate-300 leading-snug space-y-0.5">
+            <div>
+              Total Load: <b>{lastLoadMetric.total_load_ms} ms</b> ({lastLoadMetric.delivery_source})
+            </div>
+            <div>
+              Model Fetch: {lastLoadMetric.model_fetch_ms} ms ({lastLoadMetric.model_transfer_bytes} B)
+            </div>
+            <div>
+              WASM Fetch: {lastLoadMetric.wasm_fetch_span_ms} ms | Init: {lastLoadMetric.post_fetch_init_ms} ms
+            </div>
           </div>
         )}
         <label className="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer">
           <input
             type="checkbox"
             checked={skipDbWrite}
+            disabled={isBatchRunning}
             onChange={(e) => setSkipDbWrite(e.target.checked)}
           />
           Skip DB INSERT saat bench
@@ -567,17 +681,17 @@ export default function DiagnosticResult() {
         <div className="flex gap-2">
           <button
             onClick={runBatch30}
-            disabled={!model || isScanning || !lastImageRef.current}
+            disabled={!model || isScanning || isBatchRunning || !lastImageRef.current}
             className="flex-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 py-1.5 rounded-lg font-bold"
           >
             Run 30x
           </button>
           <button
             onClick={exportBenchCSV}
-            disabled={benchLogs.length === 0}
+            disabled={benchLogs.length === 0 || isBatchRunning}
             className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 py-1.5 rounded-lg font-bold"
           >
-            CSV ({inferCount})
+            CSV ({steadyCount})
           </button>
         </div>
         {batchProgress && <div className="text-[11px] text-amber-300 font-medium">{batchProgress}</div>}
@@ -595,7 +709,9 @@ export default function DiagnosticResult() {
           </button>
           <div className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-full flex items-center gap-2 shadow-lg">
             <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
-            <span className="text-xs font-bold tracking-widest uppercase text-slate-900">Live Kamera</span>
+            <span className="text-xs font-bold tracking-widest uppercase text-slate-900">
+              {isBenchMode ? 'Mode Benchmark' : 'Live Kamera'}
+            </span>
           </div>
         </header>
 
@@ -618,7 +734,9 @@ export default function DiagnosticResult() {
 
             <div className="absolute bottom-4 w-full flex justify-center z-30 px-4">
               <span className="bg-[#1a1a1a]/80 backdrop-blur-md text-white/90 px-5 py-2 rounded-full text-xs font-medium border border-white/5 text-center shadow-lg">
-                Arahkan kamera ke daun atau buah stroberi yang ingin diperiksa. Pastikan pencahayaan cukup dan fokus.
+                {isBenchMode
+                  ? 'Mode benchmark aktif (kamera dimatikan). Unggah citra uji lewat tombol Galeri di kanan bawah.'
+                  : 'Arahkan kamera ke daun atau buah stroberi yang ingin diperiksa. Pastikan pencahayaan cukup dan fokus.'}
               </span>
             </div>
           </div>
@@ -633,7 +751,7 @@ export default function DiagnosticResult() {
           ) : (
             <button
               onClick={handleCameraScan}
-              disabled={isScanning}
+              disabled={isScanning || isBenchMode}
               className="flex-1 flex items-center justify-center gap-3 bg-[#dc2626] text-white rounded-[1.25rem] py-4 shadow-sm active:scale-95 transition-all disabled:opacity-50"
             >
               {isScanning ? (
@@ -647,7 +765,8 @@ export default function DiagnosticResult() {
           <div className="flex items-center justify-center">
             <button
               onClick={() => fileInputRef.current.click()}
-              className="w-[56px] h-[56px] flex items-center justify-center bg-slate-50 text-slate-600 rounded-[1.25rem] border border-slate-100 hover:bg-slate-100 active:scale-95 transition-all shrink-0"
+              disabled={isBatchRunning}
+              className="w-[56px] h-[56px] flex items-center justify-center bg-slate-50 text-slate-600 rounded-[1.25rem] border border-slate-100 hover:bg-slate-100 active:scale-95 transition-all shrink-0 disabled:opacity-50"
             >
               <ImagePlus size={24} strokeWidth={2.5} />
             </button>
