@@ -18,14 +18,47 @@ export default defineConfig({
         ]
       },
       workbox: {
+        skipWaiting: true,
+        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 50000000,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,tflite,wasm}'], 
+        // Hapus tflite dari precache agar SW tidak gagal install di HP
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.endsWith('.tflite'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'strise-tflite-models',
+              expiration: {
+                maxEntries: 4,
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: ({ url }) => url.origin === 'https://cdn.jsdelivr.net',
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'strise-tfjs-wasm',
+              expiration: {
+                maxEntries: 20,
+                maxAgeSeconds: 60 * 60 * 24 * 30
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          }
+        ]
       }
     })
   ],
   server: {
-    host: true, 
-    allowedHosts: true 
+    host: true,
+    allowedHosts: true
   },
   resolve: {
     alias: {
